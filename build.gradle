@@ -1,0 +1,19 @@
+plugins {
+    id "ru.endlesscode.bukkitgradle" version "0.8.2"
+}
+
+group "com.github.giji34"
+description "Custom server plugin for giji34"
+version "0.1"
+
+dependencies {
+    compileOnly bukkit()
+}
+
+bukkit {
+    meta {
+        authors = ["kbinani"]
+        name = project.name
+        main = "com.github.giji34.t.Main"
+    }
+}
