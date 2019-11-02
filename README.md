@@ -36,4 +36,4 @@ giji34-custom-server-plugin
   ```
   ./gradlew assemble
   ```
-- assemble 結果は `build/libs/` に生成される
+- assemble 結果は `build/libs/` に生成される
