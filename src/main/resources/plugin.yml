@@ -6,3 +6,4 @@ commands:
   gm:
     description: Toggle gamemode between creative/spectator
     usage: giji34:gm
+  gfill:
