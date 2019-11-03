@@ -301,6 +301,13 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         Block block = e.getClickedBlock();
+        if (block == null) {
+            return;
+        }
+        EquipmentSlot hand = e.getHand();
+        if (hand != EquipmentSlot.HAND) {
+            return;
+        }
         Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
         Action action = e.getAction();
         SelectedBlockRange range;
