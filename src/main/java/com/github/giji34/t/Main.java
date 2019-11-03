@@ -1,42 +1,25 @@
 package com.github.giji34.t;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.lang.Math;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Stream;
+import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabCompleter;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.FileConfigurationOptions;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.entity.EntityInteractEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.GameMode;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
-import org.bukkit.World;
+
+import java.io.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 public class Main extends JavaPlugin implements Listener {
     public static HashMap<String, Vector> _knownBuildings;
@@ -151,6 +134,9 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         Player player = (Player)sender;
+        if (!assertGameMode(player)) {
+            return false;
+        }
         if ("tpl".equals(label)) {
             return this.onTeleportCommand(player, args);
         } else if ("tpb".equals(label)) {
@@ -359,187 +345,5 @@ public class Main extends JavaPlugin implements Listener {
         if (range != null) {
             player.sendMessage(range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
         }
-    }
-}
-
-
-class TeleportBuildingTabCompleter implements TabCompleter {
-    @Override
-    public List<String> onTabComplete​(CommandSender sender,
-                                      Command command,
-                                      String alias,
-                                      String[] args) {
-        ArrayList<String> knownBuildings = new ArrayList<String>(Main.ensureKnownBuildings().keySet());
-        Collections.sort(knownBuildings);
-        if (args.length == 0) {
-            return knownBuildings;
-        }
-        String name = args[0];
-        if ("".equals(name)) {
-            return knownBuildings;
-        }
-        knownBuildings.removeIf(it -> { return !it.startsWith(name); });
-        return knownBuildings;
-    }
-}
-
-
-class BlockNameTabCompleter implements TabCompleter {
-    @Override
-    public List<String> onTabComplete​(CommandSender sender,
-                                      Command command,
-                                      String alias,
-                                      String[] args) {
-        ArrayList<String> blocks = new ArrayList<>(Arrays.asList(Main.allMaterials));
-        Collections.sort(blocks);
-        if (args.length == 0) {
-            return blocks;
-        }
-        String name = args[args.length - 1];
-        if ("".equals(name)) {
-            return blocks;
-        }
-        blocks.removeIf(it -> !it.startsWith(name));
-        return blocks;
-    }
-}
-
-
-class SelectedBlockRangeRegistry {
-    private HashMap<String, MutableSelectedBlockRange> storage;
-
-    SelectedBlockRangeRegistry() {
-        this.storage = new HashMap<String, MutableSelectedBlockRange>();
-    }
-
-    /*nullable*/ SelectedBlockRange setStart(Player player, Loc loc) {
-        MutableSelectedBlockRange current = ensureStorage(player);
-        current.setStart(loc);
-        return current.isolate();
-    }
-
-    /*nullable*/ SelectedBlockRange setEnd(Player player, Loc loc) {
-        MutableSelectedBlockRange current = ensureStorage(player);
-        current.setEnd(loc);
-        return current.isolate();
-    }
-
-    boolean isReady(Player player) {
-        MutableSelectedBlockRange current = ensureStorage(player);
-        return current.isReady();
-    }
-
-    /*nullable*/ SelectedBlockRange current(Player player) {
-        MutableSelectedBlockRange current = ensureStorage(player);
-        return current.isolate();
-    }
-
-    private String key(Player player) {
-        return player.getName();
-    }
-
-    private MutableSelectedBlockRange ensureStorage(Player player) {
-        String name = key(player);
-        if (!this.storage.containsKey(name)) {
-            this.storage.put(name, new MutableSelectedBlockRange());
-        }
-        return this.storage.get(name);
-    }
-}
-
-
-class Loc {
-    public final int x;
-    public final int y;
-    public final int z;
-
-    Loc(int x, int y, int z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-
-    static Loc fromVectorFloored(Vector v) {
-        return new Loc((int)Math.floor(v.getX()), (int)Math.floor(v.getY()), (int)Math.floor(v.getZ()));
-    }
-
-    @Override
-    public String toString() {
-        return "[" + x + ", " + y + ", " + z + "]";
-    }
-
-    @Override
-    public Loc clone() {
-        return new Loc(x, y, z);
-    }
-}
-
-
-class SelectedBlockRange {
-    public final Loc start;
-    public final Loc end;
-
-    SelectedBlockRange(Loc start, Loc end) {
-        this.start = start.clone();
-        this.end = end.clone();
-    }
-
-    int volume() {
-        int dx = Math.abs(start.x - end.x) + 1;
-        int dy = Math.abs(start.y - end.y) + 1;
-        int dz = Math.abs(start.z - end.z) + 1;
-        return dx * dy * dz;
-    }
-
-    void forEach(Function<Loc, Boolean> callback) {
-        int x0 = Math.min(start.x, end.x);
-        int x1 = Math.max(start.x, end.x);
-        int y0 = Math.min(start.y, end.y);
-        int y1 = Math.max(start.y, end.y);
-        int z0 = Math.min(start.z, end.z);
-        int z1 = Math.max(start.z, end.z);
-        for (int y = y0; y <= y1; y++) {
-            for (int z = z0; z <= z1; z++) {
-                for (int x = x0; x <= x1; x++) {
-                    if (!callback.apply(new Loc(x, y, z))) {
-                        return;
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-class MutableSelectedBlockRange {
-    public Loc start;
-    public Loc end;
-
-    MutableSelectedBlockRange() {
-    }
-
-    void setStart(Loc start) {
-        if (start == null) {
-            return;
-        }
-        this.start = start.clone();
-    }
-
-    void setEnd(Loc end) {
-        if (end == null) {
-            return;
-        }
-        this.end = end.clone();
-    }
-
-    boolean isReady() {
-        return this.start != null && this.end != null;
-    }
-
-    /*nullable*/ SelectedBlockRange isolate() {
-        if (this.start == null || this.end == null) {
-            return null;
-        }
-        return new SelectedBlockRange(this.start, this.end);
     }
 }
