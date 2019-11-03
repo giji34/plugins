@@ -9,6 +9,8 @@ import java.lang.Math;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
@@ -136,6 +138,10 @@ public class Main extends JavaPlugin implements Listener {
         if (gfill != null) {
             gfill.setTabCompleter(new BlockNameTabCompleter());
         }
+        PluginCommand greplace = getCommand("greplace");
+        if (greplace != null) {
+            greplace.setTabCompleter(new BlockNameTabCompleter());
+        }
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -153,6 +159,8 @@ public class Main extends JavaPlugin implements Listener {
             return this.onToggleGameMode(player);
         } else if ("gfill".equals(label)) {
             return this.onFillCommand(player, args);
+        } else if ("greplace".equals(label)) {
+            return this.onReplaceCommand(player, args);
         } else {
             return false;
         }
@@ -223,7 +231,7 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         String name = args[0];
-        Material material = Material.matchMaterial("minecraft:" + name);
+        final Material material = Material.matchMaterial("minecraft:" + name);
         if (material == null) {
             player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
             return false;
@@ -233,29 +241,58 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + volume + " / " + kMaxFillVolume + " )");
             return false;
         }
-        World world = player.getWorld();
-        int x0 = Math.min(current.start.x, current.end.x);
-        int x1 = Math.max(current.start.x, current.end.x);
-        int y0 = Math.min(current.start.y, current.end.y);
-        int y1 = Math.max(current.start.y, current.end.y);
-        int z0 = Math.min(current.start.z, current.end.z);
-        int z1 = Math.max(current.start.z, current.end.z);
-
-        int changed = 0;
-        for (int y = y0; y <= y1; y++) {
-            for (int z = z0; z <= z1; z++) {
-                for (int x = x0; x <= x1; x++) {
-                    Block block = world.getBlockAt(x, y, z);
-                    if (block.getType().equals(material)) {
-                        continue;
-                    }
-                    block.setType(material);
-                    changed++;
-                }
-            }
-        }
-        player.sendMessage(changed + "個のブロックを " + name + " に置き換えました");
+        int changed = replaceBlocks(player, current, material, (block) -> {
+            return !block.getType().equals(material);
+        });
+        player.sendMessage(changed + " 個のブロックを " + name + " に置き換えました");
         return true;
+    }
+
+    private boolean onReplaceCommand(Player player, String[] args) {
+        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        if (current == null) {
+            player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
+            return false;
+        }
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "ブロック名を指定してください (例: /greplace air dirt)");
+            return false;
+        }
+        String fromName = args[0];
+        String toName = args[1];
+        final Material fromMaterial = Material.matchMaterial("minecraft:" + fromName);
+        final Material toMaterial = Material.matchMaterial("minecraft:" + toName);
+        if (fromMaterial == null || toMaterial == null) {
+            player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
+            return false;
+        }
+        int volume = current.volume();
+        if (volume > kMaxFillVolume) {
+            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + volume + " / " + kMaxFillVolume + " )");
+            return false;
+        }
+        int changed = replaceBlocks(player, current, toMaterial, (block) -> {
+            if (!block.getType().equals(fromMaterial)) {
+                return false;
+            }
+            return !block.getType().equals(toMaterial);
+        });
+        player.sendMessage(changed + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
+        return true;
+    }
+
+    private int replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
+        World world = player.getWorld();
+        final AtomicInteger changed = new AtomicInteger(0);
+        range.forEach(loc -> {
+            Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            if (predicate.apply(block)) {
+                block.setType(toMaterial);
+                changed.addAndGet(1);
+            }
+            return true;
+        });
+        return changed.get();
     }
 
     private boolean assertGameMode(Player player) {
@@ -358,7 +395,7 @@ class BlockNameTabCompleter implements TabCompleter {
         if (args.length == 0) {
             return blocks;
         }
-        String name = args[0];
+        String name = args[args.length - 1];
         if ("".equals(name)) {
             return blocks;
         }
@@ -452,6 +489,24 @@ class SelectedBlockRange {
         int dy = Math.abs(start.y - end.y) + 1;
         int dz = Math.abs(start.z - end.z) + 1;
         return dx * dy * dz;
+    }
+
+    void forEach(Function<Loc, Boolean> callback) {
+        int x0 = Math.min(start.x, end.x);
+        int x1 = Math.max(start.x, end.x);
+        int y0 = Math.min(start.y, end.y);
+        int y1 = Math.max(start.y, end.y);
+        int z0 = Math.min(start.z, end.z);
+        int z1 = Math.max(start.z, end.z);
+        for (int y = y0; y <= y1; y++) {
+            for (int z = z0; z <= z1; z++) {
+                for (int x = x0; x <= x1; x++) {
+                    if (!callback.apply(new Loc(x, y, z))) {
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
 
