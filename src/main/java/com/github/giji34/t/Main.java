@@ -274,7 +274,7 @@ public class Main extends JavaPlugin implements Listener {
 
     private ReplaceOperation replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
         World world = player.getWorld();
-        final ReplaceOperation operation = new ReplaceOperation();
+        final ReplaceOperation operation = new ReplaceOperation(player.getWorld());
         range.forEach(loc -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
             if (predicate.apply(block)) {

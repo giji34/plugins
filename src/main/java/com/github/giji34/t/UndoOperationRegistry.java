@@ -1,5 +1,6 @@
 package com.github.giji34.t;
 
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
@@ -27,6 +28,10 @@ class UndoOperationRegistry {
             return null;
         }
         ReplaceOperation operation = registry.get(key);
+        if (!operation.isIdenticalWorld(player.getWorld())) {
+            player.sendMessage(ChatColor.RED + "undo 対象のワールドが現在居るワールドと異なります");
+            return null;
+        }
         registry.remove(key);
         return operation;
     }
