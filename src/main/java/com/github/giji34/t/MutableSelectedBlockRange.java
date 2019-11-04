@@ -1,28 +1,42 @@
 package com.github.giji34.t;
 
+import org.bukkit.World;
+
+import java.util.UUID;
+
 class MutableSelectedBlockRange {
     public Loc start;
     public Loc end;
+    private UUID worldUUID;
 
     MutableSelectedBlockRange() {
     }
 
-    void setStart(Loc start) {
-        if (start == null) {
+    void setStart(Loc start, World world) {
+        if (start == null || world == null) {
             return;
         }
+        resetWorldUUIDIfNeeded(world);
         this.start = start.clone();
     }
 
-    void setEnd(Loc end) {
-        if (end == null) {
+    void setEnd(Loc end, World world) {
+        if (end == null || world == null) {
             return;
         }
+        resetWorldUUIDIfNeeded(world);
         this.end = end.clone();
     }
 
-    boolean isReady() {
-        return this.start != null && this.end != null;
+    private void resetWorldUUIDIfNeeded(World world) {
+        if (worldUUID == null) {
+            worldUUID = world.getUID();
+        }
+        if (!worldUUID.equals(world.getUID())) {
+            this.start = null;
+            this.end = null;
+            worldUUID = world.getUID();
+        }
     }
 
     /*nullable*/ SelectedBlockRange isolate() {

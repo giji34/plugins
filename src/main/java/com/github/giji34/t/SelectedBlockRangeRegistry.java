@@ -13,13 +13,13 @@ class SelectedBlockRangeRegistry {
 
     /*nullable*/ SelectedBlockRange setStart(Player player, Loc loc) {
         MutableSelectedBlockRange current = ensureStorage(player);
-        current.setStart(loc);
+        current.setStart(loc, player.getWorld());
         return current.isolate();
     }
 
     /*nullable*/ SelectedBlockRange setEnd(Player player, Loc loc) {
         MutableSelectedBlockRange current = ensureStorage(player);
-        current.setEnd(loc);
+        current.setEnd(loc, player.getWorld());
         return current.isolate();
     }
 
