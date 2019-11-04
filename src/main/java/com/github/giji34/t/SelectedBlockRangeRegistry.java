@@ -23,11 +23,6 @@ class SelectedBlockRangeRegistry {
         return current.isolate();
     }
 
-    boolean isReady(Player player) {
-        MutableSelectedBlockRange current = ensureStorage(player);
-        return current.isReady();
-    }
-
     /*nullable*/ SelectedBlockRange current(Player player) {
         MutableSelectedBlockRange current = ensureStorage(player);
         return current.isolate();

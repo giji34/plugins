@@ -9,3 +9,4 @@ commands:
     usage: giji34:gm
   gfill:
   greplace:
+  gundo:

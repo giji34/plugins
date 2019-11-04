@@ -18,11 +18,10 @@ import org.bukkit.util.Vector;
 import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class Main extends JavaPlugin implements Listener {
-    public static HashMap<String, Vector> _knownBuildings;
+    private static HashMap<String, Vector> _knownBuildings;
     public static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
 
@@ -50,9 +49,11 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private SelectedBlockRangeRegistry selectedBlockRangeRegistry;
+    private UndoOperationRegistry undoOperationRegistry;
 
     public Main() {
         this.selectedBlockRangeRegistry = new SelectedBlockRangeRegistry();
+        this.undoOperationRegistry = new UndoOperationRegistry();
     }
 
     @Override
@@ -147,6 +148,8 @@ public class Main extends JavaPlugin implements Listener {
             return this.onFillCommand(player, args);
         } else if ("greplace".equals(label)) {
             return this.onReplaceCommand(player, args);
+        } else if ("gundo".equals(label)) {
+            return this.onUndoCommand(player);
         } else {
             return false;
         }
@@ -222,15 +225,16 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
             return false;
         }
-        int volume = current.volume();
-        if (volume > kMaxFillVolume) {
-            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + volume + " / " + kMaxFillVolume + " )");
-            return false;
-        }
-        int changed = replaceBlocks(player, current, material, (block) -> {
+        ReplaceOperation operation = replaceBlocks(player, current, material, (block) -> {
             return !block.getType().equals(material);
         });
-        player.sendMessage(changed + " 個のブロックを " + name + " に置き換えました");
+        if (operation.count() > kMaxFillVolume) {
+            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
+            return false;
+        }
+        ReplaceOperation undo = operation.apply(player.getWorld());
+        player.sendMessage(operation.count() + " 個のブロックを " + name + " に置き換えました");
+        undoOperationRegistry.push(player, undo);
         return true;
     }
 
@@ -252,33 +256,47 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
             return false;
         }
-        int volume = current.volume();
-        if (volume > kMaxFillVolume) {
-            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + volume + " / " + kMaxFillVolume + " )");
-            return false;
-        }
-        int changed = replaceBlocks(player, current, toMaterial, (block) -> {
+        ReplaceOperation op = replaceBlocks(player, current, toMaterial, (block) -> {
             if (!block.getType().equals(fromMaterial)) {
                 return false;
             }
             return !block.getType().equals(toMaterial);
         });
-        player.sendMessage(changed + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
+        if (op.count() > kMaxFillVolume) {
+            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
+            return false;
+        }
+        ReplaceOperation undo = op.apply(player.getWorld());
+        player.sendMessage(op.count() + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
+        undoOperationRegistry.push(player, undo);
         return true;
     }
 
-    private int replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
+    private ReplaceOperation replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
         World world = player.getWorld();
-        final AtomicInteger changed = new AtomicInteger(0);
+        final ReplaceOperation operation = new ReplaceOperation();
         range.forEach(loc -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
             if (predicate.apply(block)) {
-                block.setType(toMaterial);
-                changed.addAndGet(1);
+                operation.register(loc, toMaterial);
             }
             return true;
         });
-        return changed.get();
+        return operation;
+    }
+
+    private boolean onUndoCommand(Player player) {
+        ReplaceOperation undo = undoOperationRegistry.pop(player);
+        if (undo == null) {
+            player.sendMessage(ChatColor.RED + "undo する操作がまだ存在しません");
+            return false;
+        }
+        if (undo.count() > kMaxFillVolume) {
+            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + undo.count() + " / " + kMaxFillVolume + " )");
+            return false;
+        }
+        undo.apply(player.getWorld());
+        return true;
     }
 
     private boolean assertGameMode(Player player) {
@@ -345,5 +363,62 @@ public class Main extends JavaPlugin implements Listener {
         if (range != null) {
             player.sendMessage(range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
         }
+    }
+}
+
+class ReplaceOperation {
+    private HashMap<Loc, Material> ops;
+
+    ReplaceOperation() {
+        ops = new HashMap<>();
+    }
+
+    ReplaceOperation apply(World world) {
+        final ReplaceOperation undo = new ReplaceOperation();
+        ops.forEach((loc, material) -> {
+            Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            Material before = block.getType();
+            if (block.getType() != material) {
+                block.setType(material);
+                undo.register(loc, before);
+            }
+        });
+        return undo;
+    }
+
+    void register(Loc loc, Material after) {
+        ops.put(loc, after);
+    }
+
+    int count() {
+        return ops.size();
+    }
+}
+
+class UndoOperationRegistry {
+    HashMap<String, ReplaceOperation> registry;
+
+    UndoOperationRegistry() {
+        registry = new HashMap<>();
+    }
+
+    void push(Player player, ReplaceOperation op) {
+        if (op == null) {
+            return;
+        }
+        registry.put(player.getName(), op);
+    }
+
+    ReplaceOperation pop(Player player) {
+        if (player == null) {
+            return null;
+        }
+        String key = player.getName();
+        if (!registry.containsKey(key)) {
+            return null;
+        }
+        ReplaceOperation operation = registry.get(key);
+        registry.remove(key);
+        return operation;
     }
 }
