@@ -364,4 +364,18 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
         }
     }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent e) {
+        Player player = e.getPlayer();
+        if (invalidGameMode(player)) {
+            return;
+        }
+        PlayerInventory inventory = player.getInventory();
+        ItemStack tool = inventory.getItemInMainHand();
+        if (tool.getType() != Material.WOODEN_AXE) {
+            return;
+        }
+        e.setCancelled(true);
+    }
 }
