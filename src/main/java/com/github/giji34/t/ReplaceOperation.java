@@ -3,6 +3,7 @@ package com.github.giji34.t;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -16,6 +17,7 @@ class ReplaceOperation {
         worldUUID = world.getUID();
     }
 
+    @Nullable
     ReplaceOperation apply(World world) {
         if (!worldUUID.equals(world.getUID())) {
             return null;

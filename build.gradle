@@ -8,6 +8,7 @@ version "0.1"
 
 dependencies {
     compileOnly bukkit()
+    compile 'org.jetbrains:annotations:16.0.2'
 }
 
 wrapper {

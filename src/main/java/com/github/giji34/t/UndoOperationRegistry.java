@@ -2,6 +2,7 @@ package com.github.giji34.t;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 
@@ -19,6 +20,7 @@ class UndoOperationRegistry {
         registry.put(player.getName(), op);
     }
 
+    @Nullable
     ReplaceOperation pop(Player player) {
         if (player == null) {
             return null;

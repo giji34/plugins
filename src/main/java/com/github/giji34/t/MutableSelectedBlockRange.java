@@ -1,6 +1,7 @@
 package com.github.giji34.t;
 
 import org.bukkit.World;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -39,7 +40,8 @@ class MutableSelectedBlockRange {
         }
     }
 
-    /*nullable*/ SelectedBlockRange isolate() {
+    @Nullable
+    SelectedBlockRange isolate() {
         if (this.start == null || this.end == null) {
             return null;
         }

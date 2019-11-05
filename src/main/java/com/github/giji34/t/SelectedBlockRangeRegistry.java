@@ -1,6 +1,7 @@
 package com.github.giji34.t;
 
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 
@@ -11,19 +12,22 @@ class SelectedBlockRangeRegistry {
         this.storage = new HashMap<String, MutableSelectedBlockRange>();
     }
 
-    /*nullable*/ SelectedBlockRange setStart(Player player, Loc loc) {
+    @Nullable
+    SelectedBlockRange setStart(Player player, Loc loc) {
         MutableSelectedBlockRange current = ensureStorage(player);
         current.setStart(loc, player.getWorld());
         return current.isolate();
     }
 
-    /*nullable*/ SelectedBlockRange setEnd(Player player, Loc loc) {
+    @Nullable
+    SelectedBlockRange setEnd(Player player, Loc loc) {
         MutableSelectedBlockRange current = ensureStorage(player);
         current.setEnd(loc, player.getWorld());
         return current.isolate();
     }
 
-    /*nullable*/ SelectedBlockRange current(Player player) {
+    @Nullable
+    SelectedBlockRange current(Player player) {
         MutableSelectedBlockRange current = ensureStorage(player);
         return current.isolate();
     }
