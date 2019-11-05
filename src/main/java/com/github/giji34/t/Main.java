@@ -9,9 +9,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -23,13 +25,13 @@ import java.util.function.Function;
 
 public class Main extends JavaPlugin implements Listener {
     private static HashMap<String, Vector> _knownBuildings;
-    public static final String[] allMaterials;
+    static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
 
     static {
-        _knownBuildings = new HashMap<String, Vector>();
+        _knownBuildings = new HashMap<>();
         allMaterials = Arrays.stream(Material.values())
-            .filter(it -> it.isBlock())
+            .filter(Material::isBlock)
             .map(it -> {
                 try {
                     String prefix = "minecraft:";
@@ -43,9 +45,7 @@ public class Main extends JavaPlugin implements Listener {
                     return null;
                 }
             })
-            .filter(it -> {
-                return it != null && !"tnt".equals(it);
-            })
+            .filter(it -> it != null && !"tnt".equals(it))
             .toArray(String[]::new);
     }
 
@@ -70,7 +70,7 @@ public class Main extends JavaPlugin implements Listener {
         File jar = getFile();
         File json = new File(new File(jar.getParent(), "giji34"), "buildings.tsv");
         if (json.exists()) {
-            HashMap<String, Vector> buildings = new HashMap<String, Vector>();
+            HashMap<String, Vector> buildings = new HashMap<>();
             BufferedReader br = new BufferedReader(new FileReader(json));
             String line;
             int lineN = 0;
@@ -101,16 +101,15 @@ public class Main extends JavaPlugin implements Listener {
             _knownBuildings = buildings;
         } else {
             BufferedWriter bw = new BufferedWriter(new FileWriter(json));
-            bw.write("#建物名\tX\tY\tZ");
+            bw.write("#地点名\tX\tY\tZ");
             bw.newLine();
             bw.flush();
             bw.close();
-            return;
         }
     }
 
-    public static synchronized HashMap<String, Vector> ensureKnownBuildings() {
-        return new HashMap<String, Vector>(_knownBuildings);
+    static synchronized HashMap<String, Vector> ensureKnownBuildings() {
+        return new HashMap<>(_knownBuildings);
     }
 
     @Override
@@ -136,23 +135,24 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         Player player = (Player)sender;
-        if (!assertGameMode(player)) {
+        if (invalidGameMode(player)) {
             return false;
         }
-        if ("tpl".equals(label)) {
-            return this.onTeleportCommand(player, args);
-        } else if ("tpb".equals(label)) {
-            return this.onTeleportToBuilding(player, args);
-        } else if ("gm".equals(label)) {
-            return this.onToggleGameMode(player);
-        } else if ("gfill".equals(label)) {
-            return this.onFillCommand(player, args);
-        } else if ("greplace".equals(label)) {
-            return this.onReplaceCommand(player, args);
-        } else if ("gundo".equals(label)) {
-            return this.onUndoCommand(player);
-        } else {
-            return false;
+        switch (label) {
+            case "tpl":
+                return this.onTeleportCommand(player, args);
+            case "tpb":
+                return this.onTeleportToBuilding(player, args);
+            case "gm":
+                return this.onToggleGameMode(player);
+            case "gfill":
+                return this.onFillCommand(player, args);
+            case "greplace":
+                return this.onReplaceCommand(player, args);
+            case "gundo":
+                return this.onUndoCommand(player);
+            default:
+                return false;
         }
     }
 
@@ -160,7 +160,7 @@ public class Main extends JavaPlugin implements Listener {
         if (args.length != 3) {
             return false;
         }
-        if (!assertGameMode(player)) {
+        if (invalidGameMode(player)) {
             return false;
         }
         Location loc = player.getLocation().clone();
@@ -180,7 +180,7 @@ public class Main extends JavaPlugin implements Listener {
         if (args.length != 1) {
             return false;
         }
-        if (!assertGameMode(player)) {
+        if (invalidGameMode(player)) {
             return false;
         }
         Location loc = player.getLocation().clone();
@@ -198,7 +198,7 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private boolean onToggleGameMode(Player player) {
-        if (!assertGameMode(player)) {
+        if (invalidGameMode(player)) {
             return false;
         }
         GameMode current = player.getGameMode();
@@ -226,9 +226,7 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
             return false;
         }
-        ReplaceOperation operation = replaceBlocks(player, current, material, (block) -> {
-            return !block.getType().equals(material);
-        });
+        ReplaceOperation operation = replaceBlocks(player, current, material, (block) -> !block.getType().equals(material));
         if (operation.count() > kMaxFillVolume) {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
             return false;
@@ -301,31 +299,31 @@ public class Main extends JavaPlugin implements Listener {
         return true;
     }
 
-    private boolean assertGameMode(Player player) {
+    private boolean invalidGameMode(Player player) {
         GameMode current = player.getGameMode();
-        return current == GameMode.CREATIVE || current == GameMode.SPECTATOR;
+        return current != GameMode.CREATIVE && current != GameMode.SPECTATOR;
     }
 
-    private static double parseX(String s, double defaultValue) throws Exception {
+    private static double parseX(String s, double defaultValue) {
         return parseCoordinate(s, defaultValue, 0.5);
     }
 
-    private static double parseY(String s, double defaultValue) throws Exception {
+    private static double parseY(String s, double defaultValue) {
         return parseCoordinate(s, defaultValue, 0);
     }
 
-    private static double parseZ(String s, double defaultValue) throws Exception {
+    private static double parseZ(String s, double defaultValue) {
         return parseCoordinate(s, defaultValue, 0.5);
     }
 
-    private static double parseCoordinate(String s, double defaultValue, double offset) throws Exception {
+    private static double parseCoordinate(String s, double defaultValue, double offset) {
         if ("~".equals(s)) {
             return defaultValue;
         }
         try {
             int v = Integer.parseInt(s);
             return v + offset;
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return Double.parseDouble(s);
     }
@@ -333,13 +331,16 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
-        if (!assertGameMode(player)) {
+        if (invalidGameMode(player)) {
             return;
         }
         if (!e.hasItem()) {
             return;
         }
         ItemStack tool = e.getItem();
+        if (tool == null) {
+            return;
+        }
         if (tool.getType() != Material.WOODEN_AXE) {
             return;
         }
