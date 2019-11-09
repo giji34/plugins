@@ -3,7 +3,7 @@ commands:
   tpl:
     uasge: giji34:tpl <X> <Y> <Z>
   tpb:
-    usage: giji34:tpb <Name of Building>
+    usage: giji34:tpb <Name of Landmark>
   gm:
     description: Toggle gamemode between creative/spectator
     usage: giji34:gm

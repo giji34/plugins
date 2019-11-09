@@ -7,7 +7,7 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 
-class TeleportBuildingTabCompleter implements TabCompleter {
+class TeleportLandmarkTabCompleter implements TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender,
                                       Command command,
@@ -18,7 +18,7 @@ class TeleportBuildingTabCompleter implements TabCompleter {
         }
         Player player = (Player)sender;
         UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> landmarks = Main.ensureKnownBuildings();
+        HashMap<String, Landmark> landmarks = Main.ensureKnownLandmarks();
         ArrayList<String> availableLandmarks = new ArrayList<String>();
         landmarks.forEach((name, landmark) -> {
             if (landmark.worldUID.equals(uid)) {

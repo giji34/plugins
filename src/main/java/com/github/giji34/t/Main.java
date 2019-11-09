@@ -27,12 +27,12 @@ import java.util.UUID;
 import java.util.function.Function;
 
 public class Main extends JavaPlugin implements Listener {
-    private static HashMap<String, Landmark> _knownBuildings;
+    private static HashMap<String, Landmark> _knownLandmarks;
     static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
 
     static {
-        _knownBuildings = new HashMap<>();
+        _knownLandmarks = new HashMap<>();
         allMaterials = Arrays.stream(Material.values())
             .filter(Material::isBlock)
             .map(it -> {
@@ -63,17 +63,17 @@ public class Main extends JavaPlugin implements Listener {
     @Override
     public void onLoad() {
         try {
-            loadBuildings();
+            loadLandmarks();
         } catch (Exception e) {
-            getLogger().info("error: loadBuildings");
+            getLogger().info("error: loadLandmarks");
         }
     }
 
-    private synchronized void loadBuildings() throws Exception {
+    private synchronized void loadLandmarks() throws Exception {
         File jar = getFile();
         File json = new File(new File(jar.getParent(), "giji34"), "buildings.tsv");
         if (json.exists()) {
-            HashMap<String, Landmark> buildings = new HashMap<>();//TODO: landmarks に変える
+            HashMap<String, Landmark> landmarks = new HashMap<>();
             BufferedReader br = new BufferedReader(new FileReader(json));
             String line;
             int lineN = 0;
@@ -100,9 +100,9 @@ public class Main extends JavaPlugin implements Listener {
                     getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
                     return;
                 }
-                buildings.put(name, new Landmark(new Vector(x, y, z), uid));
+                landmarks.put(name, new Landmark(new Vector(x, y, z), uid));
             }
-            _knownBuildings = buildings;
+            _knownLandmarks = landmarks;
         } else {
             BufferedWriter bw = new BufferedWriter(new FileWriter(json));
             bw.write("#地点名\tX\tY\tZ\tワールドUID");
@@ -112,15 +112,15 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
-    static synchronized HashMap<String, Landmark> ensureKnownBuildings() {
-        return new HashMap<>(_knownBuildings);
+    static synchronized HashMap<String, Landmark> ensureKnownLandmarks() {
+        return new HashMap<>(_knownLandmarks);
     }
 
     @Override
     public void onEnable() {
         PluginCommand tpb = getCommand("tpb");
         if (tpb != null) {
-            tpb.setTabCompleter(new TeleportBuildingTabCompleter());
+            tpb.setTabCompleter(new TeleportLandmarkTabCompleter());
         }
         PluginCommand gfill = getCommand("gfill");
         if (gfill != null) {
@@ -146,7 +146,7 @@ public class Main extends JavaPlugin implements Listener {
             case "tpl":
                 return this.onTeleportCommand(player, args);
             case "tpb":
-                return this.onTeleportToBuilding(player, args);
+                return this.onTeleportToLandmark(player, args);
             case "gm":
                 return this.onToggleGameMode(player);
             case "gfill":
@@ -180,7 +180,7 @@ public class Main extends JavaPlugin implements Listener {
         return true;
     }
 
-    private boolean onTeleportToBuilding(Player player, String[] args) {
+    private boolean onTeleportToLandmark(Player player, String[] args) {
         if (args.length != 1) {
             return false;
         }
@@ -190,11 +190,11 @@ public class Main extends JavaPlugin implements Listener {
         Location loc = player.getLocation().clone();
         UUID uuid = player.getWorld().getUID();
         String name = args[0];
-        HashMap<String, Landmark> knownBuildings = ensureKnownBuildings();
-        if (!knownBuildings.containsKey(name)) {
+        HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks();
+        if (!knownLandmarks.containsKey(name)) {
             return false;
         }
-        Landmark landmark = knownBuildings.get(name);
+        Landmark landmark = knownLandmarks.get(name);
         Vector p = landmark.location;
         if (!uuid.equals(landmark.worldUID)) {
             player.sendMessage(ChatColor.RED + "地点 \"" + name + "\" はこのディメンジョンには存在しません");
