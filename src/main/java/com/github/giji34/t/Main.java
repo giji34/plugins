@@ -5,11 +5,13 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -380,5 +382,22 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onCreatureSpawn(CreatureSpawnEvent e) {
+        CreatureSpawnEvent.SpawnReason reason = e.getSpawnReason();
+        EntityType entityType = e.getEntity().getType();
+        if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
+            return;
+        }
+        if (entityType == EntityType.WANDERING_TRADER) {
+            e.setCancelled(true);
+        } else if (entityType == EntityType.TRADER_LLAMA) {
+            e.setCancelled(true);
+        } else {
+            return;
+        }
+        getLogger().info("Cancel spawning " + entityType + "; reason=" + reason + "; location=" + e.getLocation());
     }
 }
