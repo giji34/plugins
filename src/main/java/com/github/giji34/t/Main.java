@@ -23,10 +23,11 @@ import org.jetbrains.annotations.NotNull;
 import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.function.Function;
 
 public class Main extends JavaPlugin implements Listener {
-    private static HashMap<String, Vector> _knownBuildings;
+    private static HashMap<String, Landmark> _knownBuildings;
     static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
 
@@ -72,7 +73,7 @@ public class Main extends JavaPlugin implements Listener {
         File jar = getFile();
         File json = new File(new File(jar.getParent(), "giji34"), "buildings.tsv");
         if (json.exists()) {
-            HashMap<String, Vector> buildings = new HashMap<>();
+            HashMap<String, Landmark> buildings = new HashMap<>();//TODO: landmarks に変える
             BufferedReader br = new BufferedReader(new FileReader(json));
             String line;
             int lineN = 0;
@@ -82,35 +83,36 @@ public class Main extends JavaPlugin implements Listener {
                     continue;
                 }
                 String[] tokens = line.split("\t");
-                if (tokens.length < 4) {
+                if (tokens.length < 5) {
                     continue;
                 }
                 String name = tokens[0];
                 double x;
                 double y;
                 double z;
+                UUID uid;
                 try {
                     x = parseX(tokens[1], 0);
                     y = parseY(tokens[2], 0);
                     z = parseZ(tokens[3], 0);
+                    uid = UUID.fromString(tokens[4]);
                 } catch (Exception e) {
                     getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
                     return;
                 }
-                getLogger().info(name + ": [" + x + ", " + y + ", " + z + "]");
-                buildings.put(name, new Vector(x, y, z));
+                buildings.put(name, new Landmark(new Vector(x, y, z), uid));
             }
             _knownBuildings = buildings;
         } else {
             BufferedWriter bw = new BufferedWriter(new FileWriter(json));
-            bw.write("#地点名\tX\tY\tZ");
+            bw.write("#地点名\tX\tY\tZ\tワールドUID");
             bw.newLine();
             bw.flush();
             bw.close();
         }
     }
 
-    static synchronized HashMap<String, Vector> ensureKnownBuildings() {
+    static synchronized HashMap<String, Landmark> ensureKnownBuildings() {
         return new HashMap<>(_knownBuildings);
     }
 
@@ -186,12 +188,18 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         Location loc = player.getLocation().clone();
+        UUID uuid = player.getWorld().getUID();
         String name = args[0];
-        HashMap<String, Vector> knownBuildings = ensureKnownBuildings();
+        HashMap<String, Landmark> knownBuildings = ensureKnownBuildings();
         if (!knownBuildings.containsKey(name)) {
             return false;
         }
-        Vector p = knownBuildings.get(name);
+        Landmark landmark = knownBuildings.get(name);
+        Vector p = landmark.location;
+        if (!uuid.equals(landmark.worldUID)) {
+            player.sendMessage(ChatColor.RED + "地点 \"" + name + "\" はこのディメンジョンには存在しません");
+            return false;
+        }
         loc.setX(p.getX());
         loc.setY(p.getY());
         loc.setZ(p.getZ());
