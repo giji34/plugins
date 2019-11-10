@@ -370,25 +370,25 @@ public class Main extends JavaPlugin implements Listener {
         ReplaceOperation operation = new ReplaceOperation(world);
         try {
             Statement statement = connection.createStatement();
-            resultSet = statement.executeQuery("select x, y, z, name, data from wild_blocks inner join materials on wild_blocks.material_id = materials.id where "
+            resultSet = statement.executeQuery(""
+                    + "select x, y, z, data from wild_blocks"
+                    + "    inner join materials on wild_blocks.material_id = materials.id"
+                    + "    inner join versions on wild_blocks.version_id = versions.id"
+                    + "where "
                     + current.getMinX() + " <= x and x <= " + current.getMaxX()
                     + " and " + current.getMinY() + " <= y and y <= " + current.getMaxY()
                     + " and " + current.getMinZ() + " <= z and z <= " + current.getMaxZ()
                     + " and version = " + version
                     + " and dimension = " + dimension);
             while (resultSet.next()) {
-                String materialData = resultSet.getString("name");
                 String data = resultSet.getString("data");
                 int x = resultSet.getInt("x");
                 int y = resultSet.getInt("y");
                 int z = resultSet.getInt("z");
-                if (data != null && !data.isEmpty()) {
-                    materialData += "[" + data + "]";
-                }
-                BlockData blockData = getServer().createBlockData(materialData);
+                BlockData blockData = getServer().createBlockData(data);
                 Block block = world.getBlockAt(x, y, z);
                 if (!block.getBlockData().matches(blockData)) {
-                    operation.register(new Loc(x, y, z), new ReplaceData(materialData));
+                    operation.register(new Loc(x, y, z), new ReplaceData(data));
                 }
             }
             ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
