@@ -10,3 +10,4 @@ commands:
   gfill:
   greplace:
   gundo:
+  gregenerate:

@@ -9,6 +9,7 @@ version "0.1"
 dependencies {
     compileOnly bukkit()
     compile 'org.jetbrains:annotations:16.0.2'
+    compile group:'org.xerial', name:'sqlite-jdbc', version:'3.28.0'
 }
 
 wrapper {

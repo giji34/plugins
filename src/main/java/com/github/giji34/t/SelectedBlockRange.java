@@ -19,12 +19,12 @@ class SelectedBlockRange {
     }
 
     void forEach(Function<Loc, Boolean> callback) {
-        int x0 = Math.min(start.x, end.x);
-        int x1 = Math.max(start.x, end.x);
-        int y0 = Math.min(start.y, end.y);
-        int y1 = Math.max(start.y, end.y);
-        int z0 = Math.min(start.z, end.z);
-        int z1 = Math.max(start.z, end.z);
+        int x0 = getMinX();
+        int x1 = getMaxX();
+        int y0 = getMinY();
+        int y1 = getMaxY();
+        int z0 = getMinZ();
+        int z1 = getMaxZ();
         for (int y = y0; y <= y1; y++) {
             for (int z = z0; z <= z1; z++) {
                 for (int x = x0; x <= x1; x++) {
@@ -35,4 +35,11 @@ class SelectedBlockRange {
             }
         }
     }
+
+    int getMinX() { return Math.min(start.x, end.x); }
+    int getMaxX() { return Math.max(start.x, end.x); }
+    int getMinY() { return Math.min(start.y, end.y); }
+    int getMaxY() { return Math.max(start.y, end.y); }
+    int getMinZ() { return Math.min(start.z, end.z); }
+    int getMaxZ() { return Math.max(start.z, end.z); }
 }

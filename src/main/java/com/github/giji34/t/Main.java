@@ -2,6 +2,7 @@ package com.github.giji34.t;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -12,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -21,6 +23,10 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
@@ -50,6 +56,16 @@ public class Main extends JavaPlugin implements Listener {
             })
             .filter(it -> it != null && !"tnt".equals(it))
             .toArray(String[]::new);
+
+        registerSqlite3Driver();
+    }
+
+    private static void registerSqlite3Driver() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     private SelectedBlockRangeRegistry selectedBlockRangeRegistry;
@@ -65,7 +81,7 @@ public class Main extends JavaPlugin implements Listener {
         try {
             loadLandmarks();
         } catch (Exception e) {
-            getLogger().info("error: loadLandmarks");
+            getLogger().warning("error: loadLandmarks");
         }
     }
 
@@ -116,6 +132,12 @@ public class Main extends JavaPlugin implements Listener {
         return new HashMap<>(_knownLandmarks);
     }
 
+    private Connection connectWildBlocksDatabase() throws Exception {
+        File jar = getFile();
+        File db = new File(new File(jar.getParent(), "giji34"), "regenerate.db");
+        return DriverManager.getConnection("jdbc:sqlite:" + db.getAbsolutePath());
+    }
+
     @Override
     public void onEnable() {
         PluginCommand tpb = getCommand("tpb");
@@ -155,6 +177,8 @@ public class Main extends JavaPlugin implements Listener {
                 return this.onReplaceCommand(player, args);
             case "gundo":
                 return this.onUndoCommand(player);
+            case "gregenerate":
+                return this.onRegenerateCommand(player, args);
             default:
                 return false;
         }
@@ -241,7 +265,7 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        ReplaceOperation undo = operation.apply(player.getWorld());
+        ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
         player.sendMessage(operation.count() + " 個のブロックを " + name + " に置き換えました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -275,7 +299,7 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        ReplaceOperation undo = op.apply(player.getWorld());
+        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld());
         player.sendMessage(op.count() + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -288,7 +312,7 @@ public class Main extends JavaPlugin implements Listener {
         range.forEach(loc -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
             if (predicate.apply(block)) {
-                operation.register(loc, toMaterial);
+                operation.register(loc, new ReplaceData(toMaterial, null));
             }
             return true;
         });
@@ -305,8 +329,76 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + undo.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        undo.apply(player.getWorld());
+        undo.apply(player.getServer(), player.getWorld());
         return true;
+    }
+
+    private boolean onRegenerateCommand(Player player, String[] args) {
+        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        if (current == null) {
+            player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
+            return false;
+        }
+        if (args.length != 1) {
+            player.sendMessage(ChatColor.RED + "再生成するバージョンを指定してください (1.13, 1.14 など)");
+            return false;
+        }
+        String version = args[0];
+        Connection connection;
+        try {
+            connection = connectWildBlocksDatabase();
+        } catch (Exception e) {
+            getLogger().info("db への接続に失敗: e=" + e);
+            return false;
+        }
+        World world = player.getWorld();
+        World.Environment environment = world.getEnvironment();
+        int dimension = 0;
+        switch (environment) {
+            case NETHER:
+                dimension = -1;
+                break;
+            case THE_END:
+                dimension = 1;
+                break;
+            default:
+            case NORMAL:
+                dimension = 0;
+                break;
+        }
+        ResultSet resultSet;
+        ReplaceOperation operation = new ReplaceOperation(world);
+        try {
+            Statement statement = connection.createStatement();
+            resultSet = statement.executeQuery("select x, y, z, name, data from wild_blocks inner join materials on wild_blocks.material_id = materials.id where "
+                    + current.getMinX() + " <= x and x <= " + current.getMaxX()
+                    + " and " + current.getMinY() + " <= y and y <= " + current.getMaxY()
+                    + " and " + current.getMinZ() + " <= z and z <= " + current.getMaxZ()
+                    + " and version = " + version
+                    + " and dimension = " + dimension);
+            while (resultSet.next()) {
+                String materialData = resultSet.getString("name");
+                String data = resultSet.getString("data");
+                int x = resultSet.getInt("x");
+                int y = resultSet.getInt("y");
+                int z = resultSet.getInt("z");
+                if (data != null && !data.isEmpty()) {
+                    materialData += "[" + data + "]";
+                }
+                BlockData blockData = getServer().createBlockData(materialData);
+                Block block = world.getBlockAt(x, y, z);
+                if (!block.getBlockData().matches(blockData)) {
+                    operation.register(new Loc(x, y, z), new ReplaceData(materialData));
+                }
+            }
+            ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
+            undoOperationRegistry.push(player, undo);
+            return true;
+        } catch (Exception e) {
+            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
+            getLogger().warning(e.toString());
+            return false;
+        }
     }
 
     private boolean invalidGameMode(Player player) {
