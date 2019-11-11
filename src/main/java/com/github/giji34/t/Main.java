@@ -374,9 +374,10 @@ public class Main extends JavaPlugin implements Listener {
                 materials.put(materialId, data);
             }
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "error(1): 指定した範囲のブロック情報がまだありません");
+            player.sendMessage(ChatColor.RED + "データベース \"materials\" の読み込みエラー");
             getLogger().warning(e.toString());
         }
+        int count = 0;
         try {
             int minChunkX = current.getMinX() >> 4;
             int maxChunkX = current.getMaxX() >> 4;
@@ -412,13 +413,14 @@ public class Main extends JavaPlugin implements Listener {
                         int blockX = minX + x;
                         int blockY = y;
                         int blockZ = minZ + z;
-                        if (current.getMinX() <= blockX && blockX <= current.getMaxX() && current.getMinZ() <= blockZ && blockZ <= current.getMaxZ()) {
+                        if (current.contains(blockX, blockY, blockZ)) {
                             String data = materials.get(materialId);
                             BlockData blockData = getServer().createBlockData(data);
                             Block block = world.getBlockAt(blockX, blockY, blockZ);
                             if (!block.getBlockData().matches(blockData)) {
                                 operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
                             }
+                            count++;
                         }
                         x++;
                         if (x == 16) {
@@ -436,15 +438,19 @@ public class Main extends JavaPlugin implements Listener {
                     }
                 }
             }
-            ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
-            undoOperationRegistry.push(player, undo);
-            return true;
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "error(2): 指定した範囲のブロック情報がまだありません");
+            player.sendMessage(ChatColor.RED + "データベース \"wil_chunks\" の読み込みエラー");
             getLogger().warning(e.toString());
             e.printStackTrace();
             return false;
         }
+        if (current.volume() == count) {
+            ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
+            undoOperationRegistry.push(player, undo);
+        } else {
+            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + count + " / " + current.volume() + ")");
+        }
+        return true;
     }
 
     private boolean invalidGameMode(Player player) {

@@ -42,4 +42,10 @@ class SelectedBlockRange {
     int getMaxY() { return Math.max(start.y, end.y); }
     int getMinZ() { return Math.min(start.z, end.z); }
     int getMaxZ() { return Math.max(start.z, end.z); }
+
+    boolean contains(int x, int y, int z) {
+        return getMinX() <= x && x <= getMaxX()
+                && getMinY() <= y && y <= getMaxY()
+                && getMinZ() <= z && z <= getMaxZ();
+    }
 }
