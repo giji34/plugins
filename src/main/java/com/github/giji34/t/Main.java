@@ -28,6 +28,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 public class Main extends JavaPlugin implements Listener {
     private static HashMap<String, Landmark> _knownLandmarks;
@@ -393,7 +395,8 @@ public class Main extends JavaPlugin implements Listener {
                     + " and version = \"" + version + "\""
                     + " and dimension = " + dimension);
             while (resultSet.next()) {
-                InputStream inputStream = resultSet.getBinaryStream("data");
+                InputStream compressedStream = resultSet.getBinaryStream("data");
+                InputStream inputStream = new InflaterInputStream(compressedStream);
                 int chunkX = resultSet.getInt("x");
                 int chunkZ = resultSet.getInt("z");
                 int minX = chunkX * 16;
