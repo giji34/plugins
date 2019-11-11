@@ -23,10 +23,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
@@ -366,37 +363,84 @@ public class Main extends JavaPlugin implements Listener {
                 dimension = 0;
                 break;
         }
-        ResultSet resultSet;
         ReplaceOperation operation = new ReplaceOperation(world);
+        HashMap<Integer, String> materials = new HashMap<>();
         try {
             Statement statement = connection.createStatement();
-            resultSet = statement.executeQuery(""
-                    + "select x, y, z, data from wild_blocks"
-                    + "    inner join materials on wild_blocks.material_id = materials.id"
-                    + "    inner join versions on wild_blocks.version_id = versions.id"
-                    + "where "
-                    + current.getMinX() + " <= x and x <= " + current.getMaxX()
-                    + " and " + current.getMinY() + " <= y and y <= " + current.getMaxY()
-                    + " and " + current.getMinZ() + " <= z and z <= " + current.getMaxZ()
-                    + " and version = " + version
+            ResultSet resultSet = statement.executeQuery("select * from materials");
+            while (resultSet.next()) {
+                int materialId = resultSet.getInt("id");
+                String data = resultSet.getString("data");
+                materials.put(materialId, data);
+            }
+        } catch (Exception e) {
+            player.sendMessage(ChatColor.RED + "error(1): 指定した範囲のブロック情報がまだありません");
+            getLogger().warning(e.toString());
+        }
+        try {
+            int minChunkX = current.getMinX() >> 4;
+            int maxChunkX = current.getMaxX() >> 4;
+            int minChunkZ = current.getMinZ() >> 4;
+            int maxChunkZ = current.getMaxZ() >> 4;
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(""
+                    + "select x, z, data from wild_chunks"
+                    + "    inner join versions on wild_chunks.version_id = versions.id"
+                    + " where "
+                    + minChunkX + " <= x and x <= " + maxChunkX
+                    + " and " + minChunkZ + " <= z and z <= " + maxChunkZ
+                    + " and version = \"" + version + "\""
                     + " and dimension = " + dimension);
             while (resultSet.next()) {
-                String data = resultSet.getString("data");
-                int x = resultSet.getInt("x");
-                int y = resultSet.getInt("y");
-                int z = resultSet.getInt("z");
-                BlockData blockData = getServer().createBlockData(data);
-                Block block = world.getBlockAt(x, y, z);
-                if (!block.getBlockData().matches(blockData)) {
-                    operation.register(new Loc(x, y, z), new ReplaceData(data));
+                InputStream inputStream = resultSet.getBinaryStream("data");
+                int chunkX = resultSet.getInt("x");
+                int chunkZ = resultSet.getInt("z");
+                int minX = chunkX * 16;
+                int minZ = chunkZ * 16;
+                int x = 0;
+                int y = 0;
+                int z = 0;
+                int materialId = 0;
+                int digit = 0;
+                while (true) {
+                    int b = inputStream.read();
+                    if (b < 0) {
+                        break;
+                    }
+                    materialId = materialId | ((0x7f & b) << (7 * digit));
+                    if (b < 0x80) {
+                        int blockX = minX + x;
+                        int blockY = y;
+                        int blockZ = minZ + z;
+                        String data = materials.get(materialId);
+                        BlockData blockData = getServer().createBlockData(data);
+                        Block block = world.getBlockAt(blockX, blockY, blockZ);
+                        if (!block.getBlockData().matches(blockData)) {
+                            operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
+                        }
+                        x++;
+                        if (x == 16) {
+                            x = 0;
+                            z++;
+                            if (z == 16) {
+                                y++;
+                                z = 0;
+                            }
+                        }
+                        materialId = 0;
+                        digit = 0;
+                    } else {
+                        digit++;
+                    }
                 }
             }
             ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
             undoOperationRegistry.push(player, undo);
             return true;
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
+            player.sendMessage(ChatColor.RED + "error(2): 指定した範囲のブロック情報がまだありません");
             getLogger().warning(e.toString());
+            e.printStackTrace();
             return false;
         }
     }
