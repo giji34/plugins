@@ -412,11 +412,13 @@ public class Main extends JavaPlugin implements Listener {
                         int blockX = minX + x;
                         int blockY = y;
                         int blockZ = minZ + z;
-                        String data = materials.get(materialId);
-                        BlockData blockData = getServer().createBlockData(data);
-                        Block block = world.getBlockAt(blockX, blockY, blockZ);
-                        if (!block.getBlockData().matches(blockData)) {
-                            operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
+                        if (current.getMinX() <= blockX && blockX <= current.getMaxX() && current.getMinZ() <= blockZ && blockZ <= current.getMaxZ()) {
+                            String data = materials.get(materialId);
+                            BlockData blockData = getServer().createBlockData(data);
+                            Block block = world.getBlockAt(blockX, blockY, blockZ);
+                            if (!block.getBlockData().matches(blockData)) {
+                                operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
+                            }
                         }
                         x++;
                         if (x == 16) {
