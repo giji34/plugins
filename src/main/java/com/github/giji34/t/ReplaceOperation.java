@@ -66,7 +66,7 @@ class ReplaceOperation {
             BlockData after = server.createBlockData(data.getAsString());
             if (!block.getBlockData().matches(after)) {
                 ReplaceData d = new ReplaceData(block.getBlockData().getAsString(true));
-                block.setBlockData(after);
+                block.setBlockData(after, false);
                 undo.register(loc, d);
             }
         });
