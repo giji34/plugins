@@ -23,12 +23,11 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.sql.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
 public class Main extends JavaPlugin implements Listener {
@@ -55,16 +54,6 @@ public class Main extends JavaPlugin implements Listener {
             })
             .filter(it -> it != null && !"tnt".equals(it))
             .toArray(String[]::new);
-
-        registerSqlite3Driver();
-    }
-
-    private static void registerSqlite3Driver() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
     }
 
     private SelectedBlockRangeRegistry selectedBlockRangeRegistry;
@@ -129,12 +118,6 @@ public class Main extends JavaPlugin implements Listener {
 
     static synchronized HashMap<String, Landmark> ensureKnownLandmarks() {
         return new HashMap<>(_knownLandmarks);
-    }
-
-    private Connection connectWildBlocksDatabase() throws Exception {
-        File jar = getFile();
-        File db = new File(new File(jar.getParent(), "giji34"), "regenerate.db");
-        return DriverManager.getConnection("jdbc:sqlite:" + db.getAbsolutePath());
     }
 
     @Override
@@ -343,13 +326,6 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         String version = args[0];
-        Connection connection;
-        try {
-            connection = connectWildBlocksDatabase();
-        } catch (Exception e) {
-            getLogger().info("db への接続に失敗: e=" + e);
-            return false;
-        }
         World world = player.getWorld();
         World.Environment environment = world.getEnvironment();
         int dimension = 0;
@@ -366,18 +342,20 @@ public class Main extends JavaPlugin implements Listener {
                 break;
         }
         ReplaceOperation operation = new ReplaceOperation(world);
-        HashMap<Integer, String> materials = new HashMap<>();
+        ArrayList<String> palette = new ArrayList<>();
+        File jar = getFile();
+        File dir = new File(new File(new File(new File(jar.getParent(), "giji34"), "wildblocks"), version), Integer.toString(dimension));
+        System.out.println(dir.toString());
         try {
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("select * from materials");
-            while (resultSet.next()) {
-                int materialId = resultSet.getInt("id");
-                String data = resultSet.getString("data");
-                materials.put(materialId, data);
+            BufferedReader reader = new BufferedReader(new FileReader(new File(dir, "palette.txt")));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                palette.add(line);
             }
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "データベース \"materials\" の読み込みエラー");
+            player.sendMessage(ChatColor.RED + "パレットの読み込みエラー");
             getLogger().warning(e.toString());
+            return false;
         }
         int count = 0;
         try {
@@ -385,64 +363,65 @@ public class Main extends JavaPlugin implements Listener {
             int maxChunkX = current.getMaxX() >> 4;
             int minChunkZ = current.getMinZ() >> 4;
             int maxChunkZ = current.getMaxZ() >> 4;
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(""
-                    + "select x, z, data from wild_chunks"
-                    + "    inner join versions on wild_chunks.version_id = versions.id"
-                    + " where "
-                    + minChunkX + " <= x and x <= " + maxChunkX
-                    + " and " + minChunkZ + " <= z and z <= " + maxChunkZ
-                    + " and version = \"" + version + "\""
-                    + " and dimension = " + dimension);
-            while (resultSet.next()) {
-                InputStream compressedStream = resultSet.getBinaryStream("data");
-                InputStream inputStream = new InflaterInputStream(compressedStream);
-                int chunkX = resultSet.getInt("x");
-                int chunkZ = resultSet.getInt("z");
-                int minX = chunkX * 16;
-                int minZ = chunkZ * 16;
-                int x = 0;
-                int y = 0;
-                int z = 0;
-                int materialId = 0;
-                int digit = 0;
-                while (true) {
-                    int b = inputStream.read();
-                    if (b < 0) {
-                        break;
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+                    File idx = new File(dir, "c." + chunkX + "." + chunkZ + ".idx");
+                    if (!idx.exists()) {
+                        player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + idx.getName() + ")");
+                        return true;
                     }
-                    materialId = materialId | ((0x7f & b) << (7 * digit));
-                    if (b < 0x80) {
-                        int blockX = minX + x;
-                        int blockY = y;
-                        int blockZ = minZ + z;
-                        if (current.contains(blockX, blockY, blockZ)) {
-                            String data = materials.get(materialId);
-                            BlockData blockData = getServer().createBlockData(data);
-                            Block block = world.getBlockAt(blockX, blockY, blockZ);
-                            if (!block.getBlockData().matches(blockData)) {
-                                operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
-                            }
-                            count++;
+                    FileInputStream fileInputStream = new FileInputStream(idx);
+                    InputStream inputStream = new InflaterInputStream(fileInputStream);
+                    int minX = chunkX * 16;
+                    int minZ = chunkZ * 16;
+                    int x = 0;
+                    int y = 0;
+                    int z = 0;
+                    int materialId = 0;
+                    int digit = 0;
+                    while (true) {
+                        int b = inputStream.read();
+                        if (b < 0) {
+                            break;
                         }
-                        x++;
-                        if (x == 16) {
-                            x = 0;
-                            z++;
-                            if (z == 16) {
-                                y++;
-                                z = 0;
+                        materialId = materialId | ((0x7f & b) << (7 * digit));
+                        if (b < 0x80) {
+                            int blockX = minX + x;
+                            int blockY = y;
+                            int blockZ = minZ + z;
+                            if (current.contains(blockX, blockY, blockZ)) {
+                                String data = palette.get(materialId);
+                                BlockData blockData = getServer().createBlockData(data);
+                                Block block = world.getBlockAt(blockX, blockY, blockZ);
+                                if (!block.getBlockData().matches(blockData)) {
+                                    operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
+                                }
+                                count++;
                             }
+                            x = x + 1;
+                            if (x == 16) {
+                                x = 0;
+                                z = z + 1;
+                                if (z == 16) {
+                                    y = y + 1;
+                                    z = 0;
+                                    if (y == 256) {
+                                        break;
+                                    }
+                                }
+                            }
+                            materialId = 0;
+                            digit = 0;
+                        } else {
+                            digit++;
                         }
-                        materialId = 0;
-                        digit = 0;
-                    } else {
-                        digit++;
                     }
+                    inputStream.close();
+                    fileInputStream.close();
                 }
             }
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "データベース \"wil_chunks\" の読み込みエラー");
+            player.sendMessage(ChatColor.RED + "データベースの読み込みエラー");
             getLogger().warning(e.toString());
             e.printStackTrace();
             return false;
