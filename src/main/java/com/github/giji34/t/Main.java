@@ -102,7 +102,7 @@ public class Main extends JavaPlugin implements Listener {
                     uid = UUID.fromString(tokens[4]);
                 } catch (Exception e) {
                     getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
-                    return;
+                    continue;
                 }
                 landmarks.put(name, new Landmark(new Vector(x, y, z), uid));
             }
