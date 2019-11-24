@@ -519,19 +519,64 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onCreatureSpawn(CreatureSpawnEvent e) {
+    public void onEntitySpawn(EntitySpawnEvent ese) {
+        if (!(ese instanceof CreatureSpawnEvent)) {
+            return;
+        }
+        CreatureSpawnEvent e = (CreatureSpawnEvent)ese;
         CreatureSpawnEvent.SpawnReason reason = e.getSpawnReason();
         EntityType entityType = e.getEntity().getType();
         if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
+            switch (entityType) {
+                case WITHER:
+                case ENDER_DRAGON:
+                    e.setCancelled(true);
+                    break;
+            }
             return;
         }
-        if (entityType == EntityType.WANDERING_TRADER) {
+        if (reason == CreatureSpawnEvent.SpawnReason.VILLAGE_INVASION) {
             e.setCancelled(true);
-        } else if (entityType == EntityType.TRADER_LLAMA) {
-            e.setCancelled(true);
-        } else {
+            getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
             return;
         }
-        getLogger().info("Cancel spawning " + entityType + "; reason=" + reason + "; location=" + e.getLocation());
+        switch (entityType) {
+            case SQUID:
+            case BAT:
+            case COD:
+            case DOLPHIN:
+            case SALMON:
+            case TROPICAL_FISH:
+            case PUFFERFISH:
+            case TURTLE:
+                break;
+            case SKELETON:
+            case ZOMBIE:
+            case CREEPER:
+            case ENDERMAN:
+            case ZOMBIE_VILLAGER:
+            case SPIDER:
+            case CAVE_SPIDER:
+            case WITCH:
+            case CHICKEN:
+            case PIG_ZOMBIE:
+            case SLIME:
+            case DROWNED:
+            case MAGMA_CUBE:
+            case GHAST:
+            case WITHER:
+            case BLAZE:
+            case WITHER_SKELETON:
+                e.setCancelled(true);
+                break;
+            case WANDERING_TRADER:
+            case TRADER_LLAMA:
+                getLogger().info("Cancel spawning " + entityType + "; reason=" + reason + "; location=" + e.getLocation());
+                e.setCancelled(true);
+                break;
+            default:
+                getLogger().info("Spawn " + entityType + "; reason=" + reason + "; location=" + e.getLocation());
+                break;
+        }
     }
 }
