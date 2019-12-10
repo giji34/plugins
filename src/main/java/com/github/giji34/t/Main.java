@@ -248,7 +248,7 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true);
-        player.sendMessage(operation.count() + " 個のブロックを " + name + " に置き換えました");
+        player.sendMessage(operation.count() + " 個の " + name + " ブロックを設置しました");
         undoOperationRegistry.push(player, undo);
         return true;
     }
