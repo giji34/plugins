@@ -247,7 +247,7 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
+        ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true);
         player.sendMessage(operation.count() + " 個のブロックを " + name + " に置き換えました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -281,7 +281,7 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld());
+        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true);
         player.sendMessage(op.count() + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -311,7 +311,7 @@ public class Main extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + undo.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        undo.apply(player.getServer(), player.getWorld());
+        undo.apply(player.getServer(), player.getWorld(), false);
         return true;
     }
 
@@ -427,7 +427,7 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         if (current.volume() == count) {
-            ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld());
+            ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
             undoOperationRegistry.push(player, undo);
         } else {
             player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + count + " / " + current.volume() + ")");

@@ -56,7 +56,7 @@ class ReplaceOperation {
     }
 
     @Nullable
-    ReplaceOperation apply(Server server, World world) {
+    ReplaceOperation apply(Server server, World world, boolean applyPhisics) {
         if (!worldUUID.equals(world.getUID())) {
             return null;
         }
@@ -66,7 +66,7 @@ class ReplaceOperation {
             BlockData after = server.createBlockData(data.getAsString());
             if (!block.getBlockData().matches(after)) {
                 ReplaceData d = new ReplaceData(block.getBlockData().getAsString(true));
-                block.setBlockData(after, false);
+                block.setBlockData(after, applyPhisics);
                 undo.register(loc, d);
             }
         });
