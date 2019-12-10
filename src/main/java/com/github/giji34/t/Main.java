@@ -540,6 +540,9 @@ public class Main extends JavaPlugin implements Listener {
             getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
             return;
         }
+        if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER) {
+            return;
+        }
         switch (entityType) {
             case SQUID:
             case BAT:
@@ -549,6 +552,11 @@ public class Main extends JavaPlugin implements Listener {
             case TROPICAL_FISH:
             case PUFFERFISH:
             case TURTLE:
+            case SHEEP:
+            case PIG:
+            case COW:
+            case HORSE:
+            case OCELOT:
                 break;
             case SKELETON:
             case ZOMBIE:
@@ -567,6 +575,7 @@ public class Main extends JavaPlugin implements Listener {
             case WITHER:
             case BLAZE:
             case WITHER_SKELETON:
+            case PHANTOM:
                 e.setCancelled(true);
                 break;
             case WANDERING_TRADER:
