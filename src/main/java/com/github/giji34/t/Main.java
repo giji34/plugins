@@ -3,6 +3,7 @@ package com.github.giji34.t;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Leaves;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -291,10 +292,18 @@ public class Main extends JavaPlugin implements Listener {
     private ReplaceOperation replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
         World world = player.getWorld();
         final ReplaceOperation operation = new ReplaceOperation(player.getWorld());
+        final Server server = player.getServer();
         range.forEach(loc -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            BlockData toBlockData = server.createBlockData(toMaterial);
+            String data = toBlockData.getAsString(true);
+            if (toBlockData instanceof Leaves) {
+                Leaves leaves = (Leaves)toBlockData;
+                leaves.setPersistent(true);
+                data = leaves.getAsString(true);
+            }
             if (predicate.apply(block)) {
-                operation.register(loc, new ReplaceData(toMaterial, null));
+                operation.register(loc, new ReplaceData(data));
             }
             return true;
         });
