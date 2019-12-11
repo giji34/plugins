@@ -509,7 +509,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         e.setCancelled(true);
         if (range != null) {
-            player.sendMessage(range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
+            player.sendMessage(ChatColor.GRAY + range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
         }
     }
 
