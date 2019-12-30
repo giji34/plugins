@@ -18,7 +18,7 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
         }
         Player player = (Player)sender;
         UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> landmarks = Main.ensureKnownLandmarks();
+        HashMap<String, Landmark> landmarks = Main.ensureKnownLandmarks(uid);
         ArrayList<String> availableLandmarks = new ArrayList<String>();
         landmarks.forEach((name, landmark) -> {
             if (landmark.worldUID.equals(uid)) {

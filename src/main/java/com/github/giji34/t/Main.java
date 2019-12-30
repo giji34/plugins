@@ -32,7 +32,7 @@ import java.util.function.Function;
 import java.util.zip.InflaterInputStream;
 
 public class Main extends JavaPlugin implements Listener {
-    private static HashMap<String, Landmark> _knownLandmarks;
+    private static HashMap<UUID, HashMap<String, Landmark>> _knownLandmarks;
     static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
 
@@ -78,7 +78,7 @@ public class Main extends JavaPlugin implements Listener {
         File jar = getFile();
         File json = new File(new File(jar.getParent(), "giji34"), "buildings.tsv");
         if (json.exists()) {
-            HashMap<String, Landmark> landmarks = new HashMap<>();
+            HashMap<UUID, HashMap<String, Landmark>> landmarks = new HashMap<>();
             BufferedReader br = new BufferedReader(new FileReader(json));
             String line;
             int lineN = 0;
@@ -105,7 +105,10 @@ public class Main extends JavaPlugin implements Listener {
                     getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
                     continue;
                 }
-                landmarks.put(name, new Landmark(new Vector(x, y, z), uid));
+                if (!landmarks.containsKey(uid)) {
+                    landmarks.put(uid, new HashMap<>());
+                }
+                landmarks.get(uid).put(name, new Landmark(new Vector(x, y, z), uid));
             }
             _knownLandmarks = landmarks;
         } else {
@@ -117,8 +120,12 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
-    static synchronized HashMap<String, Landmark> ensureKnownLandmarks() {
-        return new HashMap<>(_knownLandmarks);
+    static synchronized HashMap<String, Landmark> ensureKnownLandmarks(UUID uuid) {
+        if (_knownLandmarks.containsKey(uuid)) {
+            return new HashMap<>(_knownLandmarks.get(uuid));
+        } else {
+            return new HashMap<>();
+        }
     }
 
     @Override
@@ -197,7 +204,7 @@ public class Main extends JavaPlugin implements Listener {
         Location loc = player.getLocation().clone();
         UUID uuid = player.getWorld().getUID();
         String name = args[0];
-        HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks();
+        HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks(uuid);
         if (!knownLandmarks.containsKey(name)) {
             return false;
         }
