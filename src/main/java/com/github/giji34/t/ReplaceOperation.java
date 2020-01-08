@@ -84,4 +84,8 @@ class ReplaceOperation {
     boolean isIdenticalWorld(World world) {
         return worldUUID.equals(world.getUID());
     }
+
+    void clear() {
+        ops.clear();
+    }
 }

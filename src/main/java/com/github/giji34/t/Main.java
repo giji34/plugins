@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.zip.InflaterInputStream;
 
@@ -169,6 +171,8 @@ public class Main extends JavaPlugin implements Listener {
                 return this.onUndoCommand(player);
             case "gregenerate":
                 return this.onRegenerateCommand(player, args);
+            case "gtree":
+                return this.onTreeCommand(player, args);
             default:
                 return false;
         }
@@ -448,6 +452,95 @@ public class Main extends JavaPlugin implements Listener {
         } else {
             player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + count + " / " + current.volume() + ")");
         }
+        return true;
+    }
+
+    private boolean onTreeCommand(Player player, String[] args) {
+        Loc start = this.selectedBlockRangeRegistry.getStart(player);
+        if (start == null) {
+            player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
+            return false;
+        }
+        if (args.length < 1) {
+            return false;
+        }
+        int logLength = 0;
+        try {
+            logLength = Integer.parseInt(args[0], 10);
+        } catch (Exception e) {
+            player.sendMessage(ChatColor.RED + "幹の長さの指定が正しくありません: '" + args[0] + "'");
+            return true;
+        }
+        if (logLength < 1) {
+            player.sendMessage(ChatColor.RED + "幹の長さは 1 以上を指定してください");
+            return true;
+        }
+        final Material[] actualLogs = new Material[logLength];
+        final World world = player.getWorld();
+        final ReplaceOperation op = new ReplaceOperation(world);
+        final int expectedLogLength = logLength;
+        final int maxTry = 1000;
+        for (int i = 0; i < maxTry; i++) {
+            op.clear();
+            for (int j = 0; j < actualLogs.length; j++) {
+                actualLogs[j] = null;
+            }
+            final AtomicBoolean ok = new AtomicBoolean(true);
+            final AtomicInteger minLeavesLevel = new AtomicInteger(255);
+            world.generateTree(new Location(world, start.x, start.y + 1, start.z), TreeType.TREE, new BlockChangeDelegate() {
+                @Override
+                public boolean setBlockData(int x, int y, int z, @NotNull BlockData blockData) {
+                    op.register(new Loc(x, y, z), new ReplaceData(blockData.getAsString(true)));
+                    Material material = blockData.getMaterial();
+                    int height = y - start.y;
+                    if (1 <= height && height <= expectedLogLength) {
+                        if (x == start.x && z == start.z) {
+                            actualLogs[height - 1] = material;
+                        }
+                    }
+                    if (material == Material.OAK_LEAVES) {
+                        minLeavesLevel.set(Math.min(minLeavesLevel.get(), height));
+                    }
+                    return true;
+                }
+
+                @Override
+                public @NotNull BlockData getBlockData(int x, int y, int z) {
+                    return world.getBlockAt(x, y, z).getBlockData();
+                }
+
+                @Override
+                public int getHeight() {
+                    return world.getMaxHeight();
+                }
+
+                @Override
+                public boolean isEmpty(int x, int y, int z) {
+                    return world.getBlockAt(x, y, z).isEmpty();
+                }
+            });
+            if (minLeavesLevel.get() != expectedLogLength + 1) {
+                ok.set(false);
+            }
+            for (int j = 0; j < actualLogs.length; j++) {
+                Material material = actualLogs[j];
+                if (material == null) {
+                    ok.set(false);
+                    break;
+                }
+                if (material != Material.OAK_LOG) {
+                    ok.set(false);
+                    break;
+                }
+            }
+            if (!ok.get()) {
+                continue;
+            }
+            ReplaceOperation undo = op.apply(player.getServer(), world, true);
+            undoOperationRegistry.push(player, undo);
+            return true;
+        }
+        player.sendMessage(ChatColor.RED + "" + maxTry + "回、木の生成を試みましたが幹の長さが " + expectedLogLength + " のものは生成できませんでした");
         return true;
     }
 

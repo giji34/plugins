@@ -12,6 +12,11 @@ class SelectedBlockRangeRegistry {
         this.storage = new HashMap<String, MutableSelectedBlockRange>();
     }
 
+    @Nullable Loc getStart(Player player) {
+        MutableSelectedBlockRange current = ensureStorage(player);
+        return current.start.clone();
+    }
+
     @Nullable
     SelectedBlockRange setStart(Player player, Loc loc) {
         MutableSelectedBlockRange current = ensureStorage(player);
