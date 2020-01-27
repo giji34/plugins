@@ -64,11 +64,12 @@ class ReplaceOperation {
         ops.forEach((loc, data) -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
             BlockData after = server.createBlockData(data.getAsString());
-            if (!block.getBlockData().matches(after)) {
-                ReplaceData d = new ReplaceData(block.getBlockData().getAsString(true));
-                block.setBlockData(after, applyPhisics);
-                undo.register(loc, d);
+            if (block.getBlockData().matches(after)) {
+                return;
             }
+            ReplaceData d = new ReplaceData(block.getBlockData().getAsString(true));
+            block.setBlockData(after, applyPhisics);
+            undo.register(loc, d);
         });
         return undo;
     }
