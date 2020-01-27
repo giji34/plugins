@@ -575,7 +575,7 @@ public class Main extends JavaPlugin implements Listener {
             return true;
         }
 
-        player.sendMessage(ChatColor.RED + "" + maxTry + "回木の生成を試みましたが幹の長さが " + logLength + " のものは生成できませんでした");
+        player.sendMessage(ChatColor.RED + "" + maxTry + "回 " + treeType + " の生成を試みましたが幹の長さが " + logLength + " のものは生成できませんでした");
         return true;
     }
 
