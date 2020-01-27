@@ -687,49 +687,9 @@ public class Main extends JavaPlugin implements Listener {
         if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER) {
             return;
         }
-        switch (entityType) {
-            case SQUID:
-            case BAT:
-            case COD:
-            case DOLPHIN:
-            case SALMON:
-            case TROPICAL_FISH:
-            case PUFFERFISH:
-            case TURTLE:
-            case SHEEP:
-            case PIG:
-            case COW:
-            case HORSE:
-            case OCELOT:
-                break;
-            case SKELETON:
-            case ZOMBIE:
-            case CREEPER:
-            case ENDERMAN:
-            case ZOMBIE_VILLAGER:
-            case SPIDER:
-            case CAVE_SPIDER:
-            case WITCH:
-            case CHICKEN:
-            case PIG_ZOMBIE:
-            case SLIME:
-            case DROWNED:
-            case MAGMA_CUBE:
-            case GHAST:
-            case WITHER:
-            case BLAZE:
-            case WITHER_SKELETON:
-            case PHANTOM:
-                e.setCancelled(true);
-                break;
-            case WANDERING_TRADER:
-            case TRADER_LLAMA:
-                getLogger().info("Cancel spawning " + entityType + "; reason=" + reason + "; location=" + e.getLocation());
-                e.setCancelled(true);
-                break;
-            default:
-                getLogger().info("Spawn " + entityType + "; reason=" + reason + "; location=" + e.getLocation());
-                break;
+        if (reason == CreatureSpawnEvent.SpawnReason.NATURAL) {
+            e.setCancelled(true);
+            return;
         }
     }
 }
