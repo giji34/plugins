@@ -20,20 +20,18 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
         UUID uid = player.getWorld().getUID();
         HashMap<String, Landmark> landmarks = Main.ensureKnownLandmarks(uid);
         ArrayList<String> availableLandmarks = new ArrayList<String>();
-        landmarks.forEach((name, landmark) -> {
-            if (landmark.worldUID.equals(uid)) {
-                availableLandmarks.add(name);
+        final String arg = args.length > 0 ? args[0] : "";
+        landmarks.forEach((yomi, landmark) -> {
+            if (!landmark.worldUID.equals(uid)) {
+                return;
+            }
+            if (arg.length() == 0) {
+                availableLandmarks.add(landmark.name);
+            } else if (yomi.startsWith(arg)) {
+                availableLandmarks.add(landmark.name);
             }
         });
         Collections.sort(availableLandmarks);
-        if (args.length == 0) {
-            return availableLandmarks;
-        }
-        String name = args[0];
-        if ("".equals(name)) {
-            return availableLandmarks;
-        }
-        availableLandmarks.removeIf(it -> !it.startsWith(name));
         return availableLandmarks;
     }
 }

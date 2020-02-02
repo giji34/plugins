@@ -96,15 +96,16 @@ public class Main extends JavaPlugin implements Listener {
                     continue;
                 }
                 String name = tokens[0];
+                String yomi = tokens[1];
                 double x;
                 double y;
                 double z;
                 UUID uid;
                 try {
-                    x = parseX(tokens[1], 0);
-                    y = parseY(tokens[2], 0);
-                    z = parseZ(tokens[3], 0);
-                    uid = UUID.fromString(tokens[4]);
+                    x = parseX(tokens[2], 0);
+                    y = parseY(tokens[3], 0);
+                    z = parseZ(tokens[4], 0);
+                    uid = UUID.fromString(tokens[5]);
                 } catch (Exception e) {
                     getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
                     continue;
@@ -112,12 +113,12 @@ public class Main extends JavaPlugin implements Listener {
                 if (!landmarks.containsKey(uid)) {
                     landmarks.put(uid, new HashMap<>());
                 }
-                landmarks.get(uid).put(name, new Landmark(new Vector(x, y, z), uid));
+                landmarks.get(uid).put(yomi, new Landmark(name, new Vector(x, y, z), uid));
             }
             _knownLandmarks = landmarks;
         } else {
             BufferedWriter bw = new BufferedWriter(new FileWriter(json));
-            bw.write("#地点名\tX\tY\tZ\tワールドUID");
+            bw.write("#地点名\t地点名読み\tX\tY\tZ\tワールドUID");
             bw.newLine();
             bw.flush();
             bw.close();
