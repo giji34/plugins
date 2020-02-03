@@ -24,10 +24,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -216,10 +213,21 @@ public class Main extends JavaPlugin implements Listener {
         UUID uuid = player.getWorld().getUID();
         String name = args[0];
         HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks(uuid);
-        if (!knownLandmarks.containsKey(name)) {
-            return false;
+        Landmark landmark;
+        if (knownLandmarks.containsKey(name)) {
+            landmark = knownLandmarks.get(name);
+        } else {
+            ArrayList<Landmark> candidate = TeleportLandmarkTabCompleter.pickup(player, name);
+            HashSet<String> uniq = new HashSet<>();
+            for (Landmark l : candidate) {
+                uniq.add(l.name);
+            }
+            if (uniq.size() == 1) {
+                landmark = candidate.get(0);
+            } else {
+                return false;
+            }
         }
-        Landmark landmark = knownLandmarks.get(name);
         Vector p = landmark.location;
         if (!uuid.equals(landmark.worldUID)) {
             player.sendMessage(ChatColor.RED + "地点 \"" + name + "\" はこのディメンジョンには存在しません");
