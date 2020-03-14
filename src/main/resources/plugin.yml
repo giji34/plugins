@@ -12,3 +12,5 @@ commands:
   gregenerate:
   gtree:
     usage: gtree <幹の長さ>
+  guide:
+    usage: guide <Player> <Name of Landmark>

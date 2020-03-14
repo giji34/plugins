@@ -25,8 +25,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -134,7 +132,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         PluginCommand tpb = getCommand("tpb");
         if (tpb != null) {
-            tpb.setTabCompleter(new TeleportLandmarkTabCompleter());
+            tpb.setTabCompleter(new TeleportLandmarkTabCompleter(0));
         }
         PluginCommand gfill = getCommand("gfill");
         if (gfill != null) {
@@ -147,6 +145,10 @@ public class Main extends JavaPlugin implements Listener {
         PluginCommand gtree = getCommand("gtree");
         if (gtree != null) {
             gtree.setTabCompleter(new TreeTypeTabCompleter());
+        }
+        PluginCommand guide = getCommand("guide");
+        if (guide != null) {
+            guide.setTabCompleter(new TeleportLandmarkTabCompleter(1));
         }
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -177,6 +179,8 @@ public class Main extends JavaPlugin implements Listener {
                 return this.onRegenerateCommand(player, args);
             case "gtree":
                 return this.onTreeCommand(player, args);
+            case "guide":
+                return this.onGuideCommand(player, args);
             default:
                 return false;
         }
@@ -210,29 +214,15 @@ public class Main extends JavaPlugin implements Listener {
             return false;
         }
         Location loc = player.getLocation().clone();
-        UUID uuid = player.getWorld().getUID();
         String name = args[0];
-        HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks(uuid);
-        Landmark landmark;
-        if (knownLandmarks.containsKey(name)) {
-            landmark = knownLandmarks.get(name);
-        } else {
-            ArrayList<Landmark> candidate = TeleportLandmarkTabCompleter.pickup(player, name);
-            HashSet<String> uniq = new HashSet<>();
-            for (Landmark l : candidate) {
-                uniq.add(l.name);
-            }
-            if (uniq.size() == 1) {
-                landmark = candidate.get(0);
-            } else {
-                return false;
-            }
+        Landmark landmark = TeleportLandmarkTabCompleter.findLandmark(player, name);
+        if (landmark == null) {
+            return true;
+        }
+        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null) {
+            player.setSpectatorTarget(null);
         }
         Vector p = landmark.location;
-        if (!uuid.equals(landmark.worldUID)) {
-            player.sendMessage(ChatColor.RED + "地点 \"" + name + "\" はこのディメンジョンには存在しません");
-            return false;
-        }
         loc.setX(p.getX());
         loc.setY(p.getY());
         loc.setZ(p.getZ());
@@ -639,6 +629,58 @@ public class Main extends JavaPlugin implements Listener {
         }
 
         player.sendMessage(ChatColor.RED + "" + maxTry + "回 " + treeType + " の生成を試みましたが幹の長さが " + logLength + " のものは生成できませんでした");
+        return true;
+    }
+
+    private boolean onGuideCommand(Player player, String[] args) {
+        if (args.length != 2) {
+            return false;
+        }
+        String targetPlayerName = args[0];
+        String landmarkName = args[1];
+        Landmark landmark = TeleportLandmarkTabCompleter.findLandmark(player, landmarkName);
+        if (landmark == null) {
+            return true;
+        }
+
+        Player targetPlayer = null;
+        World world = player.getWorld();
+        if (!world.getUID().equals(landmark.worldUID)) {
+            player.sendMessage(ChatColor.RED + "建物と違うディメンジョンに居るため案内できません");
+            return true;
+        }
+        for (Player p : world.getPlayers()) {
+            if (p.getName().equals(targetPlayerName)) {
+                targetPlayer = p;
+                break;
+            }
+        }
+        if (targetPlayer == null) {
+            player.sendMessage(ChatColor.RED + "案内対象のプレイヤーが見つかりません: \"" + targetPlayerName + "\"");
+            return true;
+        }
+        if (targetPlayer.getUniqueId().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "自分自身を案内しようとしています。tpb コマンドを使って下さい");
+            return true;
+        }
+        if (!targetPlayer.getWorld().getUID().equals(landmark.worldUID)) {
+            player.sendMessage(ChatColor.RED + "案内対象プレイヤーが建物と違うディメンジョンに居るため案内できません");
+            return true;
+        }
+
+        targetPlayer.sendMessage(ChatColor.GRAY + "\"" + landmark.name + "\" に移動します");
+        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null) {
+            player.setSpectatorTarget(null);
+        }
+        Location loc = targetPlayer.getLocation();
+        loc.setX(landmark.location.getX());
+        loc.setY(landmark.location.getY());
+        loc.setZ(landmark.location.getZ());
+        player.setGameMode(GameMode.SPECTATOR);
+        targetPlayer.teleport(loc);
+        player.teleport(loc);
+        final Player p = targetPlayer;
+        getServer().getScheduler().runTaskLater(this, () -> player.setSpectatorTarget(p), 1);
         return true;
     }
 
