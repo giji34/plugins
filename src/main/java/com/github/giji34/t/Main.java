@@ -1,5 +1,6 @@
 package com.github.giji34.t;
 
+import com.github.giji34.t.command.ToggleGameMode;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -34,6 +35,7 @@ public class Main extends JavaPlugin implements Listener {
     private static HashMap<UUID, HashMap<String, Landmark>> _knownLandmarks;
     static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
+    private final ToggleGameMode toggleGameMode = new ToggleGameMode();
 
     static {
         _knownLandmarks = new HashMap<>();
@@ -168,7 +170,8 @@ public class Main extends JavaPlugin implements Listener {
             case "tpb":
                 return this.onTeleportToLandmark(player, args);
             case "gm":
-                return this.onToggleGameMode(player);
+                toggleGameMode.toggle(player);
+                return true;
             case "gfill":
                 return this.onFillCommand(player, args);
             case "greplace":
@@ -227,19 +230,6 @@ public class Main extends JavaPlugin implements Listener {
         loc.setY(p.getY());
         loc.setZ(p.getZ());
         player.teleport(loc);
-        return true;
-    }
-
-    private boolean onToggleGameMode(Player player) {
-        if (invalidGameMode(player)) {
-            return false;
-        }
-        GameMode current = player.getGameMode();
-        if (current == GameMode.CREATIVE) {
-            player.setGameMode(GameMode.SPECTATOR);
-        } else if (current == GameMode.SPECTATOR) {
-            player.setGameMode(GameMode.CREATIVE);
-        }
         return true;
     }
 
