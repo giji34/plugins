@@ -1,5 +1,6 @@
 package com.github.giji34.t;
 
+import com.github.giji34.t.command.Teleport;
 import com.github.giji34.t.command.ToggleGameMode;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -21,24 +22,24 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.InflaterInputStream;
 
 public class Main extends JavaPlugin implements Listener {
-    private static HashMap<UUID, HashMap<String, Landmark>> _knownLandmarks;
     static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
     private final ToggleGameMode toggleGameMode = new ToggleGameMode();
+    private final Teleport teleport = new Teleport(this);
 
     static {
-        _knownLandmarks = new HashMap<>();
         allMaterials = Arrays.stream(Material.values())
             .filter(Material::isBlock)
             .map(it -> {
@@ -69,64 +70,11 @@ public class Main extends JavaPlugin implements Listener {
     @Override
     public void onLoad() {
         try {
-            loadLandmarks();
+            File jar = getFile();
+            File pluginDirectory = new File(jar.getParent(), "giji34");
+            this.teleport.init(pluginDirectory);
         } catch (Exception e) {
             getLogger().warning("error: loadLandmarks");
-        }
-    }
-
-    private synchronized void loadLandmarks() throws Exception {
-        File jar = getFile();
-        File json = new File(new File(jar.getParent(), "giji34"), "buildings.tsv");
-        if (json.exists()) {
-            HashMap<UUID, HashMap<String, Landmark>> landmarks = new HashMap<>();
-            BufferedReader br = new BufferedReader(new FileReader(json));
-            String line;
-            int lineN = 0;
-            while ((line = br.readLine()) != null) {
-                lineN++;
-                if (line.startsWith("#")) {
-                    continue;
-                }
-                String[] tokens = line.split("\t");
-                if (tokens.length < 5) {
-                    continue;
-                }
-                String name = tokens[0];
-                String yomi = tokens[1];
-                double x;
-                double y;
-                double z;
-                UUID uid;
-                try {
-                    x = parseX(tokens[2], 0);
-                    y = parseY(tokens[3], 0);
-                    z = parseZ(tokens[4], 0);
-                    uid = UUID.fromString(tokens[5]);
-                } catch (Exception e) {
-                    getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
-                    continue;
-                }
-                if (!landmarks.containsKey(uid)) {
-                    landmarks.put(uid, new HashMap<>());
-                }
-                landmarks.get(uid).put(yomi, new Landmark(name, new Vector(x, y, z), uid));
-            }
-            _knownLandmarks = landmarks;
-        } else {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(json));
-            bw.write("#地点名\t地点名読み\tX\tY\tZ\tワールドUID");
-            bw.newLine();
-            bw.flush();
-            bw.close();
-        }
-    }
-
-    static synchronized HashMap<String, Landmark> ensureKnownLandmarks(UUID uuid) {
-        if (_knownLandmarks.containsKey(uuid)) {
-            return new HashMap<>(_knownLandmarks.get(uuid));
-        } else {
-            return new HashMap<>();
         }
     }
 
@@ -134,7 +82,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         PluginCommand tpb = getCommand("tpb");
         if (tpb != null) {
-            tpb.setTabCompleter(new TeleportLandmarkTabCompleter(0));
+            tpb.setTabCompleter(new TeleportLandmarkTabCompleter(teleport, 0));
         }
         PluginCommand gfill = getCommand("gfill");
         if (gfill != null) {
@@ -150,7 +98,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         PluginCommand guide = getCommand("guide");
         if (guide != null) {
-            guide.setTabCompleter(new TeleportLandmarkTabCompleter(1));
+            guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleport,1));
         }
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -166,9 +114,9 @@ public class Main extends JavaPlugin implements Listener {
         }
         switch (label) {
             case "tpl":
-                return this.onTeleportCommand(player, args);
+                return teleport.teleport(player, args);
             case "tpb":
-                return this.onTeleportToLandmark(player, args);
+                return teleport.teleportToLandmark(player, args);
             case "gm":
                 toggleGameMode.toggle(player);
                 return true;
@@ -183,54 +131,10 @@ public class Main extends JavaPlugin implements Listener {
             case "gtree":
                 return this.onTreeCommand(player, args);
             case "guide":
-                return this.onGuideCommand(player, args);
+                return teleport.guide(player, args);
             default:
                 return false;
         }
-    }
-
-    private boolean onTeleportCommand(Player player, String[] args) {
-        if (args.length != 3) {
-            return false;
-        }
-        if (invalidGameMode(player)) {
-            return false;
-        }
-        Location loc = player.getLocation().clone();
-        try {
-            loc.setX(parseX(args[0], loc.getX()));
-            loc.setY(parseY(args[1], loc.getY()));
-            loc.setZ(parseZ(args[2], loc.getZ()));
-        } catch (Exception e) {
-            return false;
-        }
-
-        player.teleport(loc);
-        return true;
-    }
-
-    private boolean onTeleportToLandmark(Player player, String[] args) {
-        if (args.length != 1) {
-            return false;
-        }
-        if (invalidGameMode(player)) {
-            return false;
-        }
-        Location loc = player.getLocation().clone();
-        String name = args[0];
-        Landmark landmark = TeleportLandmarkTabCompleter.findLandmark(player, name);
-        if (landmark == null) {
-            return true;
-        }
-        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null) {
-            player.setSpectatorTarget(null);
-        }
-        Vector p = landmark.location;
-        loc.setX(p.getX());
-        loc.setY(p.getY());
-        loc.setZ(p.getZ());
-        player.teleport(loc);
-        return true;
     }
 
     private boolean onFillCommand(Player player, String[] args) {
@@ -622,85 +526,9 @@ public class Main extends JavaPlugin implements Listener {
         return true;
     }
 
-    private boolean onGuideCommand(Player player, String[] args) {
-        if (args.length != 2) {
-            return false;
-        }
-        String targetPlayerName = args[0];
-        String landmarkName = args[1];
-        Landmark landmark = TeleportLandmarkTabCompleter.findLandmark(player, landmarkName);
-        if (landmark == null) {
-            return true;
-        }
-
-        Player targetPlayer = null;
-        World world = player.getWorld();
-        if (!world.getUID().equals(landmark.worldUID)) {
-            player.sendMessage(ChatColor.RED + "建物と違うディメンジョンに居るため案内できません");
-            return true;
-        }
-        for (Player p : world.getPlayers()) {
-            if (p.getName().equals(targetPlayerName)) {
-                targetPlayer = p;
-                break;
-            }
-        }
-        if (targetPlayer == null) {
-            player.sendMessage(ChatColor.RED + "案内対象のプレイヤーが見つかりません: \"" + targetPlayerName + "\"");
-            return true;
-        }
-        if (targetPlayer.getUniqueId().equals(player.getUniqueId())) {
-            player.sendMessage(ChatColor.RED + "自分自身を案内しようとしています。tpb コマンドを使って下さい");
-            return true;
-        }
-        if (!targetPlayer.getWorld().getUID().equals(landmark.worldUID)) {
-            player.sendMessage(ChatColor.RED + "案内対象プレイヤーが建物と違うディメンジョンに居るため案内できません");
-            return true;
-        }
-
-        targetPlayer.sendMessage(ChatColor.GRAY + "\"" + landmark.name + "\" に移動します");
-        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null) {
-            player.setSpectatorTarget(null);
-        }
-        Location loc = targetPlayer.getLocation();
-        loc.setX(landmark.location.getX());
-        loc.setY(landmark.location.getY());
-        loc.setZ(landmark.location.getZ());
-        player.setGameMode(GameMode.SPECTATOR);
-        targetPlayer.teleport(loc);
-        player.teleport(loc);
-        final Player p = targetPlayer;
-        getServer().getScheduler().runTaskLater(this, () -> player.setSpectatorTarget(p), 1);
-        return true;
-    }
-
     private boolean invalidGameMode(Player player) {
         GameMode current = player.getGameMode();
         return current != GameMode.CREATIVE && current != GameMode.SPECTATOR;
-    }
-
-    private static double parseX(String s, double defaultValue) {
-        return parseCoordinate(s, defaultValue, 0.5);
-    }
-
-    private static double parseY(String s, double defaultValue) {
-        return parseCoordinate(s, defaultValue, 0);
-    }
-
-    private static double parseZ(String s, double defaultValue) {
-        return parseCoordinate(s, defaultValue, 0.5);
-    }
-
-    private static double parseCoordinate(String s, double defaultValue, double offset) {
-        if ("~".equals(s)) {
-            return defaultValue;
-        }
-        try {
-            int v = Integer.parseInt(s);
-            return v + offset;
-        } catch (Exception ignored) {
-        }
-        return Double.parseDouble(s);
     }
 
     @EventHandler

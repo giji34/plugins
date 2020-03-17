@@ -4,7 +4,7 @@ import org.bukkit.util.Vector;
 
 import java.util.UUID;
 
-class Landmark {
+public class Landmark {
     public final String name;
     public final UUID worldUID;
     public final Vector location;

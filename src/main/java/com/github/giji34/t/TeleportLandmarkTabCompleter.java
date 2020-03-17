@@ -1,5 +1,6 @@
 package com.github.giji34.t;
 
+import com.github.giji34.t.command.Teleport;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -10,9 +11,11 @@ import java.util.*;
 
 class TeleportLandmarkTabCompleter implements TabCompleter {
     final int argIndex;
+    final Teleport teleport;
 
-    TeleportLandmarkTabCompleter(int argIndex) {
+    TeleportLandmarkTabCompleter(Teleport teleport, int argIndex) {
         this.argIndex = argIndex;
+        this.teleport = teleport;
     }
 
     @Override
@@ -28,7 +31,7 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
             return null;
         }
         final String arg = args[this.argIndex];
-        ArrayList<Landmark> candidate = pickupCandidates(player, arg);
+        ArrayList<Landmark> candidate = pickupCandidates(player, arg, teleport);
         ArrayList<String> names = new ArrayList<>();
         for (Landmark l : candidate) {
             names.add(l.name);
@@ -38,9 +41,9 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
         return uniqNames;
     }
 
-    static ArrayList<Landmark> pickupCandidates(Player player, String arg) {
+    ArrayList<Landmark> pickupCandidates(Player player, String arg, Teleport teleport) {
         UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> landmarks = Main.ensureKnownLandmarks(uid);
+        HashMap<String, Landmark> landmarks = teleport.ensureKnownLandmarks(uid);
         ArrayList<Landmark> availableLandmarks = new ArrayList<>();
         landmarks.forEach((yomi, landmark) -> {
             if (!landmark.worldUID.equals(uid)) {
@@ -53,36 +56,6 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
             }
         });
         return availableLandmarks;
-    }
-
-    static Landmark findLandmark(Player player, String landmarkName) {
-        UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> knownLandmarks = Main.ensureKnownLandmarks(uid);
-        Landmark landmark = null;
-        if (knownLandmarks.containsKey(landmarkName)) {
-            landmark = knownLandmarks.get(landmarkName);
-        } else {
-            ArrayList<Landmark> candidate = TeleportLandmarkTabCompleter.pickupCandidates(player, landmarkName);
-            HashSet<String> uniq = new HashSet<>();
-            for (Landmark l : candidate) {
-                uniq.add(l.name);
-            }
-            if (uniq.size() == 1) {
-                landmark = candidate.get(0);
-            } else {
-                player.sendMessage(ChatColor.RED + "\"" + landmarkName + "\"に合致する建物が見つかりません");
-            }
-        }
-        if (landmark == null) {
-            player.sendMessage(ChatColor.RED + "\"" + landmarkName + "\"に合致する建物が見つかりません");
-            return null;
-        }
-        if (landmark.worldUID.equals(uid)) {
-            return landmark;
-        } else {
-            player.sendMessage(ChatColor.RED + "建物 \"" + landmarkName + "\" は現在居るディメンジョンには存在しません");
-            return null;
-        }
     }
 
     static ArrayList<String> makeUnique(ArrayList<String> src) {
