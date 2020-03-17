@@ -1,7 +1,7 @@
 package com.github.giji34.t;
 
-import com.github.giji34.t.command.Teleport;
-import com.github.giji34.t.command.ToggleGameMode;
+import com.github.giji34.t.command.TeleportCommand;
+import com.github.giji34.t.command.ToggleGameModeCommand;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -36,8 +36,8 @@ import java.util.zip.InflaterInputStream;
 public class Main extends JavaPlugin implements Listener {
     static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
-    private final ToggleGameMode toggleGameMode = new ToggleGameMode();
-    private final Teleport teleport = new Teleport(this);
+    private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
+    private final TeleportCommand teleportCommand = new TeleportCommand(this);
 
     static {
         allMaterials = Arrays.stream(Material.values())
@@ -72,7 +72,7 @@ public class Main extends JavaPlugin implements Listener {
         try {
             File jar = getFile();
             File pluginDirectory = new File(jar.getParent(), "giji34");
-            this.teleport.init(pluginDirectory);
+            this.teleportCommand.init(pluginDirectory);
         } catch (Exception e) {
             getLogger().warning("error: loadLandmarks");
         }
@@ -82,7 +82,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         PluginCommand tpb = getCommand("tpb");
         if (tpb != null) {
-            tpb.setTabCompleter(new TeleportLandmarkTabCompleter(teleport, 0));
+            tpb.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand, 0));
         }
         PluginCommand gfill = getCommand("gfill");
         if (gfill != null) {
@@ -98,7 +98,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         PluginCommand guide = getCommand("guide");
         if (guide != null) {
-            guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleport,1));
+            guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand,1));
         }
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -114,11 +114,11 @@ public class Main extends JavaPlugin implements Listener {
         }
         switch (label) {
             case "tpl":
-                return teleport.teleport(player, args);
+                return teleportCommand.teleport(player, args);
             case "tpb":
-                return teleport.teleportToLandmark(player, args);
+                return teleportCommand.teleportToLandmark(player, args);
             case "gm":
-                toggleGameMode.toggle(player);
+                toggleGameModeCommand.toggle(player);
                 return true;
             case "gfill":
                 return this.onFillCommand(player, args);
@@ -131,7 +131,7 @@ public class Main extends JavaPlugin implements Listener {
             case "gtree":
                 return this.onTreeCommand(player, args);
             case "guide":
-                return teleport.guide(player, args);
+                return teleportCommand.guide(player, args);
             default:
                 return false;
         }

@@ -1,7 +1,6 @@
 package com.github.giji34.t;
 
-import com.github.giji34.t.command.Teleport;
-import org.bukkit.ChatColor;
+import com.github.giji34.t.command.TeleportCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -11,11 +10,11 @@ import java.util.*;
 
 class TeleportLandmarkTabCompleter implements TabCompleter {
     final int argIndex;
-    final Teleport teleport;
+    final TeleportCommand teleportCommand;
 
-    TeleportLandmarkTabCompleter(Teleport teleport, int argIndex) {
+    TeleportLandmarkTabCompleter(TeleportCommand teleport, int argIndex) {
         this.argIndex = argIndex;
-        this.teleport = teleport;
+        this.teleportCommand = teleport;
     }
 
     @Override
@@ -31,7 +30,7 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
             return null;
         }
         final String arg = args[this.argIndex];
-        ArrayList<Landmark> candidate = pickupCandidates(player, arg, teleport);
+        ArrayList<Landmark> candidate = pickupCandidates(player, arg);
         ArrayList<String> names = new ArrayList<>();
         for (Landmark l : candidate) {
             names.add(l.name);
@@ -41,9 +40,9 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
         return uniqNames;
     }
 
-    ArrayList<Landmark> pickupCandidates(Player player, String arg, Teleport teleport) {
+    ArrayList<Landmark> pickupCandidates(Player player, String arg) {
         UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> landmarks = teleport.ensureKnownLandmarks(uid);
+        HashMap<String, Landmark> landmarks = teleportCommand.ensureKnownLandmarks(uid);
         ArrayList<Landmark> availableLandmarks = new ArrayList<>();
         landmarks.forEach((yomi, landmark) -> {
             if (!landmark.worldUID.equals(uid)) {

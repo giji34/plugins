@@ -16,11 +16,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.UUID;
 
-public class Teleport {
+public class TeleportCommand {
     final Plugin owner;
     HashMap<UUID, HashMap<String, Landmark>> _knownLandmarks;
 
-    public Teleport(Plugin owner) {
+    public TeleportCommand(Plugin owner) {
         this.owner = owner;
     }
 
