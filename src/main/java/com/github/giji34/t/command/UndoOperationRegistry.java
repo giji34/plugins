@@ -1,4 +1,4 @@
-package com.github.giji34.t;
+package com.github.giji34.t.command;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;

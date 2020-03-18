@@ -1,5 +1,6 @@
 package com.github.giji34.t;
 
+import com.github.giji34.t.command.EditCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -15,7 +16,7 @@ class BlockNameTabCompleter implements TabCompleter {
                                       Command command,
                                       String alias,
                                       String[] args) {
-        ArrayList<String> blocks = new ArrayList<>(Arrays.asList(Main.allMaterials));
+        ArrayList<String> blocks = new ArrayList<>(Arrays.asList(EditCommand.allMaterials));
         Collections.sort(blocks);
         if (args.length == 0) {
             return blocks;

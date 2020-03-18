@@ -1,5 +1,6 @@
-package com.github.giji34.t;
+package com.github.giji34.t.command;
 
+import com.github.giji34.t.Loc;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,7 +13,8 @@ class SelectedBlockRangeRegistry {
         this.storage = new HashMap<String, MutableSelectedBlockRange>();
     }
 
-    @Nullable Loc getStart(Player player) {
+    @Nullable
+    Loc getStart(Player player) {
         MutableSelectedBlockRange current = ensureStorage(player);
         return current.start.clone();
     }

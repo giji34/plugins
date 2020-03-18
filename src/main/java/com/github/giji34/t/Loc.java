@@ -4,12 +4,12 @@ import org.bukkit.util.Vector;
 
 import java.util.Objects;
 
-class Loc {
+public class Loc {
     public final int x;
     public final int y;
     public final int z;
 
-    Loc(int x, int y, int z) {
+    public Loc(int x, int y, int z) {
         this.x = x;
         this.y = y;
         this.z = z;

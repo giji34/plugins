@@ -1,5 +1,6 @@
-package com.github.giji34.t;
+package com.github.giji34.t.command;
 
+import com.github.giji34.t.Loc;
 import org.bukkit.World;
 import org.jetbrains.annotations.Nullable;
 
