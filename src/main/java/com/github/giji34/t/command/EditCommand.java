@@ -9,14 +9,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
-import java.util.ArrayList;
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.zip.InflaterInputStream;
 
 public class EditCommand {
     private SelectedBlockRangeRegistry selectedBlockRangeRegistry;
@@ -57,7 +55,7 @@ public class EditCommand {
     }
 
     public boolean fill(Player player, String[] args) {
-        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
@@ -84,7 +82,7 @@ public class EditCommand {
     }
 
     public boolean replace(Player player, String[] args) {
-        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
@@ -132,7 +130,7 @@ public class EditCommand {
     }
 
     public boolean regenerate(Player player, String[] args) {
-        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
@@ -158,94 +156,32 @@ public class EditCommand {
                 break;
         }
         ReplaceOperation operation = new ReplaceOperation(world);
-        ArrayList<String> palette = new ArrayList<>();
-        File dir = new File(new File(new File(pluginDirectory, "wildblocks"), version), Integer.toString(dimension));
-        System.out.println(dir.toString());
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(new File(dir, "palette.txt")));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                palette.add(line);
-            }
-        } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "パレットの読み込みエラー");
-            owner.getLogger().warning(e.toString());
-            return false;
+        final LocalSnapshotReader reader = new LocalSnapshotReader(pluginDirectory);
+        final Snapshot snapshot = reader.read(version, dimension, current);
+        final String error = snapshot.getErrorMessage();
+        if (error != null) {
+            player.sendMessage(ChatColor.RED + error);
+            return true;
         }
-        int count = 0;
-        try {
-            int minChunkX = current.getMinX() >> 4;
-            int maxChunkX = current.getMaxX() >> 4;
-            int minChunkZ = current.getMinZ() >> 4;
-            int maxChunkZ = current.getMaxZ() >> 4;
-            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-                    File idx = new File(dir, "c." + chunkX + "." + chunkZ + ".idx");
-                    if (!idx.exists()) {
-                        player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + idx.getName() + ")");
-                        return true;
-                    }
-                    FileInputStream fileInputStream = new FileInputStream(idx);
-                    InputStream inputStream = new InflaterInputStream(fileInputStream);
-                    int minX = chunkX * 16;
-                    int minZ = chunkZ * 16;
-                    int x = 0;
-                    int y = 0;
-                    int z = 0;
-                    int materialId = 0;
-                    int digit = 0;
-                    while (true) {
-                        int b = inputStream.read();
-                        if (b < 0) {
-                            break;
-                        }
-                        materialId = materialId | ((0x7f & b) << (7 * digit));
-                        if (b < 0x80) {
-                            int blockX = minX + x;
-                            int blockY = y;
-                            int blockZ = minZ + z;
-                            if (current.contains(blockX, blockY, blockZ)) {
-                                String data = palette.get(materialId);
-                                BlockData blockData = owner.getServer().createBlockData(data);
-                                Block block = world.getBlockAt(blockX, blockY, blockZ);
-                                if (!block.getBlockData().matches(blockData)) {
-                                    operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
-                                }
-                                count++;
-                            }
-                            x = x + 1;
-                            if (x == 16) {
-                                x = 0;
-                                z = z + 1;
-                                if (z == 16) {
-                                    y = y + 1;
-                                    z = 0;
-                                    if (y == 256) {
-                                        break;
-                                    }
-                                }
-                            }
-                            materialId = 0;
-                            digit = 0;
-                        } else {
-                            digit++;
-                        }
-                    }
-                    inputStream.close();
-                    fileInputStream.close();
-                }
+        final Server server = owner.getServer();
+
+        final boolean ok = current.forEach(loc -> {
+            BlockData bd = snapshot.blockAt(loc, server);
+            if (bd == null) {
+                player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
+                return false;
             }
-        } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "データベースの読み込みエラー");
-            owner.getLogger().warning(e.toString());
-            e.printStackTrace();
-            return false;
-        }
-        if (current.volume() == count) {
+            Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            if (!block.getBlockData().matches(bd)) {
+                operation.register(loc, new ReplaceData(bd.getAsString()));
+            }
+            return true;
+        });
+        if (ok) {
             ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
             undoOperationRegistry.push(player, undo);
         } else {
-            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + count + " / " + current.volume() + ")");
+            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
         }
         return true;
     }
@@ -369,25 +305,25 @@ public class EditCommand {
     }
 
     public void setSelectionStartBlock(Player player, Loc loc) {
-        SelectedBlockRange range = selectedBlockRangeRegistry.setStart(player, loc);
+        BlockRange range = selectedBlockRangeRegistry.setStart(player, loc);
         if (range != null) {
             sendSelectionMessage(player, range);
         }
     }
 
     public void setSelectionEndBlock(Player player, Loc loc) {
-        SelectedBlockRange range = selectedBlockRangeRegistry.setEnd(player, loc);
+        BlockRange range = selectedBlockRangeRegistry.setEnd(player, loc);
         if (range != null) {
             sendSelectionMessage(player, range);
         }
     }
 
-    private void sendSelectionMessage(Player player, SelectedBlockRange range) {
+    private void sendSelectionMessage(Player player, BlockRange range) {
         player.sendMessage(ChatColor.GRAY + range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
     }
 
     @NotNull
-    private ReplaceOperation replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
+    private ReplaceOperation replaceBlocks(Player player, BlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
         World world = player.getWorld();
         final ReplaceOperation operation = new ReplaceOperation(player.getWorld());
         final Server server = player.getServer();

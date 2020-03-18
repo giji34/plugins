@@ -6,12 +6,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-class MutableSelectedBlockRange {
+class MutableBlockRange {
     public Loc start;
     public Loc end;
     private UUID worldUUID;
 
-    MutableSelectedBlockRange() {
+    MutableBlockRange() {
     }
 
     void setStart(Loc start, World world) {
@@ -42,10 +42,10 @@ class MutableSelectedBlockRange {
     }
 
     @Nullable
-    SelectedBlockRange isolate() {
+    BlockRange isolate() {
         if (this.start == null || this.end == null) {
             return null;
         }
-        return new SelectedBlockRange(this.start, this.end);
+        return new BlockRange(this.start, this.end);
     }
 }

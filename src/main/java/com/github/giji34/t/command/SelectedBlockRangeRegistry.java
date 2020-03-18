@@ -7,35 +7,35 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 
 class SelectedBlockRangeRegistry {
-    private HashMap<String, MutableSelectedBlockRange> storage;
+    private HashMap<String, MutableBlockRange> storage;
 
     SelectedBlockRangeRegistry() {
-        this.storage = new HashMap<String, MutableSelectedBlockRange>();
+        this.storage = new HashMap<String, MutableBlockRange>();
     }
 
     @Nullable
     Loc getStart(Player player) {
-        MutableSelectedBlockRange current = ensureStorage(player);
+        MutableBlockRange current = ensureStorage(player);
         return current.start.clone();
     }
 
     @Nullable
-    SelectedBlockRange setStart(Player player, Loc loc) {
-        MutableSelectedBlockRange current = ensureStorage(player);
+    BlockRange setStart(Player player, Loc loc) {
+        MutableBlockRange current = ensureStorage(player);
         current.setStart(loc, player.getWorld());
         return current.isolate();
     }
 
     @Nullable
-    SelectedBlockRange setEnd(Player player, Loc loc) {
-        MutableSelectedBlockRange current = ensureStorage(player);
+    BlockRange setEnd(Player player, Loc loc) {
+        MutableBlockRange current = ensureStorage(player);
         current.setEnd(loc, player.getWorld());
         return current.isolate();
     }
 
     @Nullable
-    SelectedBlockRange current(Player player) {
-        MutableSelectedBlockRange current = ensureStorage(player);
+    BlockRange current(Player player) {
+        MutableBlockRange current = ensureStorage(player);
         return current.isolate();
     }
 
@@ -43,10 +43,10 @@ class SelectedBlockRangeRegistry {
         return player.getName();
     }
 
-    private MutableSelectedBlockRange ensureStorage(Player player) {
+    private MutableBlockRange ensureStorage(Player player) {
         String name = key(player);
         if (!this.storage.containsKey(name)) {
-            this.storage.put(name, new MutableSelectedBlockRange());
+            this.storage.put(name, new MutableBlockRange());
         }
         return this.storage.get(name);
     }
