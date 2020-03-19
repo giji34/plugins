@@ -11,8 +11,13 @@ import java.net.URL;
 import java.util.Date;
 
 class SnapshotServerClient {
-    static final String kHost = "192.168.1.1"; //TODO
-    static final int kPort = 8000;
+    final String host;
+    final int port;
+
+    SnapshotServerClient(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
 
     /**
      * 指定したバージョンでチャンク生成直後のブロックの状態を取得する.
@@ -52,15 +57,15 @@ class SnapshotServerClient {
 
     private URL createURL(String type, @Nullable Date date, @Nullable String version, int dimension, BlockRange range) throws Exception {
         StringBuilder sb = new StringBuilder();
-        sb.append("http://").append(kHost).append(":").append(kPort);
-        sb.append("?type=").append(type);
+        sb.append("http://").append(host).append(":").append(port);
+        sb.append("/").append(type);
+        sb.append("?dimension=").append(dimension);
         if (version != null) {
             sb.append("&version=").append(version);
         }
         if (date != null) {
             sb.append("&time=").append(date.getTime());
         }
-        sb.append("&dimension=").append(dimension);
         sb.append("&minX=").append(range.getMinX()).append("&maxX=").append(range.getMaxX());
         sb.append("&minY=").append(range.getMinY()).append("&maxY=").append(range.getMaxY());
         sb.append("&minZ=").append(range.getMinZ()).append("&maxZ=").append(range.getMaxZ());

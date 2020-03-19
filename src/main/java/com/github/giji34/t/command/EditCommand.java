@@ -9,7 +9,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Function;
@@ -23,6 +26,8 @@ public class EditCommand {
     private static final int kMaxFillVolume = 4096;
     private final JavaPlugin owner;
     private File pluginDirectory;
+    private String snapshotServerHost;
+    private int snapshotServerPort;
 
     static {
         allMaterials = Arrays.stream(Material.values())
@@ -52,6 +57,27 @@ public class EditCommand {
 
     public void init(File pluginDirectory) {
         this.pluginDirectory = pluginDirectory;
+        File config = new File(pluginDirectory, "config.properties");
+        try {
+            FileInputStream fis = new FileInputStream(config);
+            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] tokens = line.split("=");
+                if (tokens.length != 2) {
+                    continue;
+                }
+                String key = tokens[0];
+                String value = tokens[1];
+                if (key.equals("snapshotserver.host")) {
+                    this.snapshotServerHost = value;
+                } else if (key.equals("snapshotserver.port")) {
+                    this.snapshotServerPort = Integer.parseInt(value, 10);
+                }
+            }
+        } catch (Exception e) {
+            owner.getLogger().warning("config.properties がありません");
+        }
     }
 
     public boolean fill(Player player, String[] args) {
@@ -156,8 +182,8 @@ public class EditCommand {
                 break;
         }
         ReplaceOperation operation = new ReplaceOperation(world);
-        final LocalSnapshotReader reader = new LocalSnapshotReader(pluginDirectory);
-        final Snapshot snapshot = reader.read(version, dimension, current);
+        final SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
+        final Snapshot snapshot = client.getWildSnapshot(version, dimension, current);
         final String error = snapshot.getErrorMessage();
         if (error != null) {
             player.sendMessage(ChatColor.RED + error);
