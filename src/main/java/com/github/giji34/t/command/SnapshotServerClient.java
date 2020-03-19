@@ -84,6 +84,10 @@ class SnapshotServerClient {
         InputStream in = connection.getInputStream();
         Gson gson = new Gson();
         SnapshotServerResponse response = gson.fromJson(new InputStreamReader(in), SnapshotServerResponse.class);
+        if (!response.status.equals("ok")) {
+            snapshot.setErrorMessage(response.status);
+            return;
+        }
         final BlockRange range = snapshot.range;
         int idx = 0;
         for (int y = range.getMinY(); y <= range.getMaxY(); y++) {
