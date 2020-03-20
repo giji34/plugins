@@ -13,6 +13,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Function;
@@ -161,11 +165,6 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
         }
-        if (args.length != 1) {
-            player.sendMessage(ChatColor.RED + "再生成するバージョンを指定してください (1.13, 1.14 など)");
-            return false;
-        }
-        String version = args[0];
         World world = player.getWorld();
         World.Environment environment = world.getEnvironment();
         int dimension = 0;
@@ -181,9 +180,31 @@ public class EditCommand {
                 dimension = 0;
                 break;
         }
+        Snapshot snapshot = null;
+        String info = "";
+        if (args.length == 2) {
+            String dateString = args[0] + " " + args[1];
+            SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
+            OffsetDateTime date = null;
+            try {
+                date = ParseDateString(dateString);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                player.sendMessage(ChatColor.RED + "日付のフォーマットが不正です(例: 2020-03-20 16:31");
+                return true;
+            }
+            snapshot = client.getBackupSnapshot(date, dimension, current);
+            info = dateString + "時点の状態";
+        } else if (args.length == 1) {
+            String version = args[0];
+            final SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
+            snapshot = client.getWildSnapshot(version, dimension, current);
+            info = "バージョン" + version + "の初期状態";
+        } else {
+            player.sendMessage(ChatColor.RED + "コマンドの引数が不正です。/gregenerate <バージョン> または /gregenerate <yyyy-MM-dd hh:mm> として下さい");
+            return false;
+        }
         ReplaceOperation operation = new ReplaceOperation(world);
-        final SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
-        final Snapshot snapshot = client.getWildSnapshot(version, dimension, current);
         final String error = snapshot.getErrorMessage();
         if (error != null) {
             player.sendMessage(ChatColor.RED + error);
@@ -191,8 +212,9 @@ public class EditCommand {
         }
         final Server server = owner.getServer();
 
+        final Snapshot s = snapshot;
         final boolean ok = current.forEach(loc -> {
-            BlockData bd = snapshot.blockAt(loc, server);
+            BlockData bd = s.blockAt(loc, server);
             if (bd == null) {
                 player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
                 return false;
@@ -206,6 +228,7 @@ public class EditCommand {
         if (ok) {
             ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
             undoOperationRegistry.push(player, undo);
+            player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + info + "に戻しました");
         } else {
             player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
         }
@@ -422,5 +445,32 @@ public class EditCommand {
             result += "[" + props + "]";
         }
         return result;
+    }
+
+    private OffsetDateTime ParseDateString(String s) throws Exception {
+        String[] tokens = s.split(" ");
+        if (tokens.length != 2) {
+            System.out.println("tokens.length=" + tokens.length);
+            throw new Exception("invalid date format");
+        }
+        String ymdString = tokens[0];
+        String hmString = tokens[1];
+        String[] ymd = ymdString.split("-");
+        if (ymd.length != 3) {
+            System.out.println("ymd.length=" + ymd.length);
+            throw new Exception("invalid date format");
+        }
+        String[] hm = hmString.split(":");
+        if (hm.length != 2) {
+            System.out.println("hm.length=" + hm.length);
+            throw new Exception("invalid date format");
+        }
+        int year = Integer.parseInt(ymd[0], 10);
+        int month = Integer.parseInt(ymd[1], 10);
+        int day = Integer.parseInt(ymd[2], 10);
+        int hour = Integer.parseInt(hm[0], 10);
+        int minute = Integer.parseInt(hm[1], 10);
+        ZoneOffset zoneOffset = ZoneId.systemDefault().getRules().getOffset(Instant.now());;
+        return OffsetDateTime.of(year, month, day, hour, minute,0, 0, zoneOffset);
     }
 }

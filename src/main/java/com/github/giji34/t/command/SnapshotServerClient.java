@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Date;
+import java.time.OffsetDateTime;
 
 class SnapshotServerClient {
     final String host;
@@ -44,7 +44,7 @@ class SnapshotServerClient {
      * @param range
      * @return
      */
-    @NotNull Snapshot getBackupSnapshot(Date date, int dimension, BlockRange range) {
+    @NotNull Snapshot getBackupSnapshot(OffsetDateTime date, int dimension, BlockRange range) {
         MutableSnapshot snapshot = new MutableSnapshot(range);
         try {
             URL url = createURL("history", date, null, dimension, range);
@@ -55,7 +55,7 @@ class SnapshotServerClient {
         return snapshot;
     }
 
-    private URL createURL(String type, @Nullable Date date, @Nullable String version, int dimension, BlockRange range) throws Exception {
+    private URL createURL(String type, @Nullable OffsetDateTime date, @Nullable String version, int dimension, BlockRange range) throws Exception {
         StringBuilder sb = new StringBuilder();
         sb.append("http://").append(host).append(":").append(port);
         sb.append("/").append(type);
@@ -64,7 +64,7 @@ class SnapshotServerClient {
             sb.append("&version=").append(version);
         }
         if (date != null) {
-            sb.append("&time=").append(date.getTime());
+            sb.append("&time=").append(date.toEpochSecond());
         }
         sb.append("&minX=").append(range.getMinX()).append("&maxX=").append(range.getMaxX());
         sb.append("&minY=").append(range.getMinY()).append("&maxY=").append(range.getMaxY());
