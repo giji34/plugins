@@ -4,11 +4,11 @@ import com.github.giji34.t.Loc;
 
 import java.util.function.Function;
 
-class SelectedBlockRange {
+class BlockRange {
     public final Loc start;
     public final Loc end;
 
-    SelectedBlockRange(Loc start, Loc end) {
+    BlockRange(Loc start, Loc end) {
         this.start = start.clone();
         this.end = end.clone();
     }
@@ -20,7 +20,7 @@ class SelectedBlockRange {
         return dx * dy * dz;
     }
 
-    void forEach(Function<Loc, Boolean> callback) {
+    boolean forEach(Function<Loc, Boolean> callback) {
         int x0 = getMinX();
         int x1 = getMaxX();
         int y0 = getMinY();
@@ -31,11 +31,12 @@ class SelectedBlockRange {
             for (int z = z0; z <= z1; z++) {
                 for (int x = x0; x <= x1; x++) {
                     if (!callback.apply(new Loc(x, y, z))) {
-                        return;
+                        return false;
                     }
                 }
             }
         }
+        return true;
     }
 
     int getMinX() { return Math.min(start.x, end.x); }

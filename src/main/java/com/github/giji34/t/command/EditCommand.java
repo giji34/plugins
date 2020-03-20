@@ -9,14 +9,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
-import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.zip.InflaterInputStream;
 
 public class EditCommand {
     private SelectedBlockRangeRegistry selectedBlockRangeRegistry;
@@ -25,6 +30,8 @@ public class EditCommand {
     private static final int kMaxFillVolume = 4096;
     private final JavaPlugin owner;
     private File pluginDirectory;
+    private String snapshotServerHost;
+    private int snapshotServerPort;
 
     static {
         allMaterials = Arrays.stream(Material.values())
@@ -54,10 +61,31 @@ public class EditCommand {
 
     public void init(File pluginDirectory) {
         this.pluginDirectory = pluginDirectory;
+        File config = new File(pluginDirectory, "config.properties");
+        try {
+            FileInputStream fis = new FileInputStream(config);
+            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] tokens = line.split("=");
+                if (tokens.length != 2) {
+                    continue;
+                }
+                String key = tokens[0];
+                String value = tokens[1];
+                if (key.equals("snapshotserver.host")) {
+                    this.snapshotServerHost = value;
+                } else if (key.equals("snapshotserver.port")) {
+                    this.snapshotServerPort = Integer.parseInt(value, 10);
+                }
+            }
+        } catch (Exception e) {
+            owner.getLogger().warning("config.properties がありません");
+        }
     }
 
     public boolean fill(Player player, String[] args) {
-        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
@@ -84,7 +112,7 @@ public class EditCommand {
     }
 
     public boolean replace(Player player, String[] args) {
-        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
@@ -132,16 +160,11 @@ public class EditCommand {
     }
 
     public boolean regenerate(Player player, String[] args) {
-        SelectedBlockRange current = this.selectedBlockRangeRegistry.current(player);
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
         }
-        if (args.length != 1) {
-            player.sendMessage(ChatColor.RED + "再生成するバージョンを指定してください (1.13, 1.14 など)");
-            return false;
-        }
-        String version = args[0];
         World world = player.getWorld();
         World.Environment environment = world.getEnvironment();
         int dimension = 0;
@@ -157,95 +180,57 @@ public class EditCommand {
                 dimension = 0;
                 break;
         }
+        Snapshot snapshot = null;
+        String info = "";
+        if (args.length == 2) {
+            String dateString = args[0] + " " + args[1];
+            SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
+            OffsetDateTime date = null;
+            try {
+                date = ParseDateString(dateString);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                player.sendMessage(ChatColor.RED + "日付のフォーマットが不正です(例: 2020-03-20 16:31");
+                return true;
+            }
+            snapshot = client.getBackupSnapshot(date, dimension, current);
+            info = dateString + "時点の状態";
+        } else if (args.length == 1) {
+            String version = args[0];
+            final SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
+            snapshot = client.getWildSnapshot(version, dimension, current);
+            info = "バージョン" + version + "の初期状態";
+        } else {
+            player.sendMessage(ChatColor.RED + "コマンドの引数が不正です。/gregenerate <バージョン> または /gregenerate <yyyy-MM-dd hh:mm> として下さい");
+            return false;
+        }
         ReplaceOperation operation = new ReplaceOperation(world);
-        ArrayList<String> palette = new ArrayList<>();
-        File dir = new File(new File(new File(pluginDirectory, "wildblocks"), version), Integer.toString(dimension));
-        System.out.println(dir.toString());
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(new File(dir, "palette.txt")));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                palette.add(line);
-            }
-        } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "パレットの読み込みエラー");
-            owner.getLogger().warning(e.toString());
-            return false;
+        final String error = snapshot.getErrorMessage();
+        if (error != null) {
+            player.sendMessage(ChatColor.RED + error);
+            return true;
         }
-        int count = 0;
-        try {
-            int minChunkX = current.getMinX() >> 4;
-            int maxChunkX = current.getMaxX() >> 4;
-            int minChunkZ = current.getMinZ() >> 4;
-            int maxChunkZ = current.getMaxZ() >> 4;
-            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-                    File idx = new File(dir, "c." + chunkX + "." + chunkZ + ".idx");
-                    if (!idx.exists()) {
-                        player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + idx.getName() + ")");
-                        return true;
-                    }
-                    FileInputStream fileInputStream = new FileInputStream(idx);
-                    InputStream inputStream = new InflaterInputStream(fileInputStream);
-                    int minX = chunkX * 16;
-                    int minZ = chunkZ * 16;
-                    int x = 0;
-                    int y = 0;
-                    int z = 0;
-                    int materialId = 0;
-                    int digit = 0;
-                    while (true) {
-                        int b = inputStream.read();
-                        if (b < 0) {
-                            break;
-                        }
-                        materialId = materialId | ((0x7f & b) << (7 * digit));
-                        if (b < 0x80) {
-                            int blockX = minX + x;
-                            int blockY = y;
-                            int blockZ = minZ + z;
-                            if (current.contains(blockX, blockY, blockZ)) {
-                                String data = palette.get(materialId);
-                                BlockData blockData = owner.getServer().createBlockData(data);
-                                Block block = world.getBlockAt(blockX, blockY, blockZ);
-                                if (!block.getBlockData().matches(blockData)) {
-                                    operation.register(new Loc(blockX, blockY, blockZ), new ReplaceData(data));
-                                }
-                                count++;
-                            }
-                            x = x + 1;
-                            if (x == 16) {
-                                x = 0;
-                                z = z + 1;
-                                if (z == 16) {
-                                    y = y + 1;
-                                    z = 0;
-                                    if (y == 256) {
-                                        break;
-                                    }
-                                }
-                            }
-                            materialId = 0;
-                            digit = 0;
-                        } else {
-                            digit++;
-                        }
-                    }
-                    inputStream.close();
-                    fileInputStream.close();
-                }
+        final Server server = owner.getServer();
+
+        final Snapshot s = snapshot;
+        final boolean ok = current.forEach(loc -> {
+            BlockData bd = s.blockAt(loc, server);
+            if (bd == null) {
+                player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
+                return false;
             }
-        } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "データベースの読み込みエラー");
-            owner.getLogger().warning(e.toString());
-            e.printStackTrace();
-            return false;
-        }
-        if (current.volume() == count) {
+            Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            if (!block.getBlockData().matches(bd)) {
+                operation.register(loc, new ReplaceData(bd.getAsString()));
+            }
+            return true;
+        });
+        if (ok) {
             ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
             undoOperationRegistry.push(player, undo);
+            player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + info + "に戻しました");
         } else {
-            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + count + " / " + current.volume() + ")");
+            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
         }
         return true;
     }
@@ -369,25 +354,25 @@ public class EditCommand {
     }
 
     public void setSelectionStartBlock(Player player, Loc loc) {
-        SelectedBlockRange range = selectedBlockRangeRegistry.setStart(player, loc);
+        BlockRange range = selectedBlockRangeRegistry.setStart(player, loc);
         if (range != null) {
             sendSelectionMessage(player, range);
         }
     }
 
     public void setSelectionEndBlock(Player player, Loc loc) {
-        SelectedBlockRange range = selectedBlockRangeRegistry.setEnd(player, loc);
+        BlockRange range = selectedBlockRangeRegistry.setEnd(player, loc);
         if (range != null) {
             sendSelectionMessage(player, range);
         }
     }
 
-    private void sendSelectionMessage(Player player, SelectedBlockRange range) {
+    private void sendSelectionMessage(Player player, BlockRange range) {
         player.sendMessage(ChatColor.GRAY + range.start.toString() + " - " + range.end.toString() + " が選択されました (" + range.volume() + " ブロック)");
     }
 
     @NotNull
-    private ReplaceOperation replaceBlocks(Player player, SelectedBlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
+    private ReplaceOperation replaceBlocks(Player player, BlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
         World world = player.getWorld();
         final ReplaceOperation operation = new ReplaceOperation(player.getWorld());
         final Server server = player.getServer();
@@ -460,5 +445,32 @@ public class EditCommand {
             result += "[" + props + "]";
         }
         return result;
+    }
+
+    private OffsetDateTime ParseDateString(String s) throws Exception {
+        String[] tokens = s.split(" ");
+        if (tokens.length != 2) {
+            System.out.println("tokens.length=" + tokens.length);
+            throw new Exception("invalid date format");
+        }
+        String ymdString = tokens[0];
+        String hmString = tokens[1];
+        String[] ymd = ymdString.split("-");
+        if (ymd.length != 3) {
+            System.out.println("ymd.length=" + ymd.length);
+            throw new Exception("invalid date format");
+        }
+        String[] hm = hmString.split(":");
+        if (hm.length != 2) {
+            System.out.println("hm.length=" + hm.length);
+            throw new Exception("invalid date format");
+        }
+        int year = Integer.parseInt(ymd[0], 10);
+        int month = Integer.parseInt(ymd[1], 10);
+        int day = Integer.parseInt(ymd[2], 10);
+        int hour = Integer.parseInt(hm[0], 10);
+        int minute = Integer.parseInt(hm[1], 10);
+        ZoneOffset zoneOffset = ZoneId.systemDefault().getRules().getOffset(Instant.now());;
+        return OffsetDateTime.of(year, month, day, hour, minute,0, 0, zoneOffset);
     }
 }
