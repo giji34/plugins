@@ -94,10 +94,21 @@ class SnapshotServerClient {
             for (int z = range.getMinZ(); z <= range.getMaxZ(); z++) {
                 for (int x = range.getMinX(); x <= range.getMaxX(); x++) {
                     final String blockData = response.palette[response.blocks[idx]];
-                    snapshot.setBlockData(x, y, z, blockData);
+                    snapshot.setBlockData(x, y, z, ResolveNamespacedId(blockData));
                     idx++;
                 }
             }
+        }
+    }
+
+    private static String ResolveNamespacedId(String s) {
+        // snapshot-server/server の仕様.
+        // air => minecraft:air
+        // :somenamespace:blockname => somenamespace:blockname
+        if (s.startsWith(":")) {
+            return s.substring(1);
+        } else {
+            return "minecraft:" + s;
         }
     }
 }
