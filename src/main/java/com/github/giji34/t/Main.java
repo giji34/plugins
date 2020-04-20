@@ -100,6 +100,8 @@ public class Main extends JavaPlugin implements Listener {
                 return editCommand.tree(player, args);
             case "guide":
                 return teleportCommand.guide(player, args);
+            case "follow":
+                return teleportCommand.follow(player, args);
             default:
                 return false;
         }

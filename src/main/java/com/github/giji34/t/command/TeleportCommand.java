@@ -160,6 +160,33 @@ public class TeleportCommand {
         return true;
     }
 
+    public boolean follow(Player player, String[] args) {
+        String targetPlayerName = args[0];
+        World world = player.getWorld();
+        Player targetPlayer = null;
+        for (Player p : world.getPlayers()) {
+            if (p.getName().equals(targetPlayerName)) {
+                targetPlayer = p;
+                break;
+            }
+        }
+        if (targetPlayer == null) {
+            player.sendMessage(ChatColor.RED + "案内対象のプレイヤーが見つかりません: \"" + targetPlayerName + "\"");
+            return true;
+        }
+        if (!world.getUID().equals(targetPlayer.getWorld().getUID())) {
+            player.sendMessage(ChatColor.RED + "案内対象のプレイヤーと違うディメンジョンに居るため案内できません");
+            return true;
+        }
+        Location loc = targetPlayer.getLocation();
+        player.setGameMode(GameMode.CREATIVE);
+        player.setGameMode(GameMode.SPECTATOR);
+        player.teleport(loc);
+        final Player p = targetPlayer;
+        owner.getServer().getScheduler().runTaskLater(owner, () -> player.setSpectatorTarget(p), 1);
+        return true;
+    }
+
     @Nullable
     Landmark findLandmark(Player player, String landmarkName) {
         UUID uid = player.getWorld().getUID();
