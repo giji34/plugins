@@ -231,6 +231,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         Location loc = portalCommand.getPortalReturnLocation(player);
+        portalCommand.setAnyPortalCooldown(player);
         if (loc == null) {
             return;
         }

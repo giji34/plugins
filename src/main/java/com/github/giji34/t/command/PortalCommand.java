@@ -51,19 +51,24 @@ public class PortalCommand {
             player.sendMessage(ChatColor.RED + "ポータルにする範囲を木の斧で選択して下さい");
             return true;
         }
-        if (args.length != 5) {
+        if (args.length != 2 && args.length != 5) {
             return false;
         }
         String name = args[0];
         String destination = args[1];
-        int x, y, z;
-        try {
-            x = Integer.parseInt(args[2]);
-            y = Integer.parseInt(args[3]);
-            z = Integer.parseInt(args[4]);
-        } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
-            return true;
+        boolean enableReturnLoc = args.length == 5;
+        Loc returnLoc = null;
+        if (enableReturnLoc) {
+            int x, y, z;
+            try {
+                x = Integer.parseInt(args[2]);
+                y = Integer.parseInt(args[3]);
+                z = Integer.parseInt(args[4]);
+            } catch (Exception e) {
+                player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
+                return true;
+            }
+            returnLoc = new Loc(x, y, z);
         }
         UUID worldUUID = player.getWorld().getUID();
         if (storege.containsKey(worldUUID)) {
@@ -83,7 +88,6 @@ public class PortalCommand {
             storege.put(worldUUID, new HashMap<>());
         }
         final HashMap<Loc, Portal> target = storege.get(worldUUID);
-        Loc returnLoc = new Loc(x, y, z);
         final Portal portal = new Portal(name, returnLoc, destination);
         selection.forEach((Loc loc) -> {
             target.put(loc, portal);
@@ -165,6 +169,7 @@ public class PortalCommand {
     }
 
     final HashMap<String, PortalCooldown> portalCooldown = new HashMap<>();
+    final HashMap<String, Long> anyPortalCooldown = new HashMap<>();
 
     @Nullable
     public Portal filterPortalByCooldown(Player player, @Nullable Portal portal) {
@@ -173,15 +178,29 @@ public class PortalCommand {
         }
         Portal coolingdown = getCoolingdownPortal(player);
         if (coolingdown != null) {
-            return null;
+            portal = null;
         }
         portalCooldown.remove(player.getName());
+        Long anyCooldown = anyPortalCooldown.get(player.getName());
+        if (anyCooldown != null) {
+            long now = System.currentTimeMillis();
+            if (now < anyCooldown + PortalCooldown.kCooldownMilliSeconds) {
+                portal = null;
+            } else {
+                anyPortalCooldown.remove(player.getName());
+            }
+        }
         return portal;
     }
 
     public void markPortalUsed(Player player, Portal portal) {
         long now = System.currentTimeMillis();
         portalCooldown.put(player.getName(), new PortalCooldown(portal, now));
+    }
+
+    public void setAnyPortalCooldown(Player player) {
+        long now = System.currentTimeMillis();
+        anyPortalCooldown.put(player.getName(), now);
     }
 
     @Nullable
