@@ -3,6 +3,7 @@ package com.github.giji34.t;
 import com.github.giji34.t.command.EditCommand;
 import com.github.giji34.t.command.TeleportCommand;
 import com.github.giji34.t.command.ToggleGameModeCommand;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -30,6 +31,7 @@ public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
     private final TeleportCommand teleportCommand = new TeleportCommand(this);
     private final EditCommand editCommand = new EditCommand(this);
+    private Permission permission;
 
     public Main() {
     }
@@ -39,6 +41,7 @@ public class Main extends JavaPlugin implements Listener {
         try {
             File jar = getFile();
             File pluginDirectory = new File(jar.getParent(), "giji34");
+            this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
             this.teleportCommand.init(pluginDirectory);
             this.editCommand.init(pluginDirectory);
         } catch (Exception e) {
@@ -79,6 +82,10 @@ public class Main extends JavaPlugin implements Listener {
         Player player = (Player)sender;
         if (invalidGameMode(player)) {
             return false;
+        }
+        if (!this.permission.hasPermission(player, label)) {
+            player.sendMessage(ChatColor.RED + label + "コマンドを実行する権限がありません");
+            return true;
         }
         switch (label) {
             case "tpl":
