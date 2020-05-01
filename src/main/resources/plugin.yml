@@ -16,3 +16,7 @@ commands:
     usage: guide <Player> <Name of Landmark>
   follow:
     usage: follow <Player>
+  create_portal:
+    usage: create_portal <name> <returnX> <returnY> <returnZ>
+  delete_portal:
+    usage: delete_portal <name>

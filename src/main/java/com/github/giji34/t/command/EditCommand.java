@@ -8,6 +8,7 @@ import org.bukkit.block.data.type.Leaves;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -365,6 +366,11 @@ public class EditCommand {
         if (range != null) {
             sendSelectionMessage(player, range);
         }
+    }
+
+    @Nullable
+    public BlockRange getCurrentSelection(Player player) {
+        return selectedBlockRangeRegistry.current(player);
     }
 
     private void sendSelectionMessage(Player player, BlockRange range) {

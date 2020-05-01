@@ -1,6 +1,7 @@
 package com.github.giji34.t;
 
 import com.github.giji34.t.command.EditCommand;
+import com.github.giji34.t.command.PortalCommand;
 import com.github.giji34.t.command.TeleportCommand;
 import com.github.giji34.t.command.ToggleGameModeCommand;
 import org.bukkit.ChatColor;
@@ -31,6 +32,7 @@ public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
     private final TeleportCommand teleportCommand = new TeleportCommand(this);
     private final EditCommand editCommand = new EditCommand(this);
+    private final PortalCommand portalCommand = new PortalCommand(this);
     private Permission permission;
 
     public Main() {
@@ -44,8 +46,9 @@ public class Main extends JavaPlugin implements Listener {
             this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
             this.teleportCommand.init(pluginDirectory);
             this.editCommand.init(pluginDirectory);
+            this.portalCommand.init(pluginDirectory);
         } catch (Exception e) {
-            getLogger().warning("error: loadLandmarks");
+            getLogger().warning("error: " + e);
         }
     }
 
@@ -109,6 +112,10 @@ public class Main extends JavaPlugin implements Listener {
                 return teleportCommand.guide(player, args);
             case "follow":
                 return teleportCommand.follow(player, args);
+            case "create_portal":
+                return portalCommand.create(player, args, editCommand);
+            case "delete_portal":
+                return portalCommand.delete(player, args);
             default:
                 return false;
         }
