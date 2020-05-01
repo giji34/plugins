@@ -17,10 +17,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -215,18 +212,40 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) throws IOException {
         Player player = event.getPlayer();
-        Portal portal = portalCommand.findPortal(player);
+        Portal portal = portalCommand.filterPortalByCooldown(player, portalCommand.findPortal(player));
         if (portal == null) {
             return;
         }
-        Location returnLoc = new Location(player.getWorld(), portal.returnLoc.x, portal.returnLoc.y, portal.returnLoc.z);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         dos.writeUTF("Connect");
         dos.writeUTF(portal.destination);
-        player.teleport(returnLoc, PlayerTeleportEvent.TeleportCause.PLUGIN);
         player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
         baos.close();
         dos.close();
+        portalCommand.markPortalUsed(player, portal);
+    }
+
+
+    @EventHandler
+    public void onPlayerJoined(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        Location loc = portalCommand.getPortalReturnLocation(player);
+        if (loc == null) {
+            return;
+        }
+        player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        Portal portal = portalCommand.getCoolingdownPortal(player);
+        if (portal == null) {
+            portalCommand.setPortalReturnLocation(player, null);
+        } else {
+            Location loc = new Location(player.getWorld(), portal.returnLoc.x, portal.returnLoc.y, portal.returnLoc.z);
+            portalCommand.setPortalReturnLocation(player, loc);
+        }
     }
 }

@@ -15,6 +15,18 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.*;
 
+class PortalCooldown {
+    static final long kCooldownMilliSeconds = 5000;
+
+    final Portal portal;
+    final long timestamp;
+
+    PortalCooldown(Portal portal, long timestamp) {
+        this.portal = portal;
+        this.timestamp = timestamp;
+    }
+}
+
 public class PortalCommand {
     final HashMap<UUID, HashMap<Loc, Portal>> storege = new HashMap<>();
     final JavaPlugin owner;
@@ -132,6 +144,57 @@ public class PortalCommand {
         Location loc = player.getLocation();
         Loc l = new Loc(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
         return portals.get(l);
+    }
+
+    final HashMap<String, Location> portalReturnLocation = new HashMap<>();
+    public void setPortalReturnLocation(Player player, @Nullable Location loc) {
+        //TODO(kbinani): 永続化する
+        portalReturnLocation.put(player.getName(), loc);
+    }
+
+    @Nullable
+    public Location getPortalReturnLocation(Player player) {
+        Location returnLocation = portalReturnLocation.get(player.getName());
+        if (returnLocation == null) {
+            return null;
+        }
+        if (!returnLocation.getWorld().getUID().equals(player.getWorld().getUID())) {
+            return null;
+        }
+        return returnLocation;
+    }
+
+    final HashMap<String, PortalCooldown> portalCooldown = new HashMap<>();
+
+    @Nullable
+    public Portal filterPortalByCooldown(Player player, @Nullable Portal portal) {
+        if (portal == null) {
+            return null;
+        }
+        Portal coolingdown = getCoolingdownPortal(player);
+        if (coolingdown != null) {
+            return null;
+        }
+        portalCooldown.remove(player.getName());
+        return portal;
+    }
+
+    public void markPortalUsed(Player player, Portal portal) {
+        long now = System.currentTimeMillis();
+        portalCooldown.put(player.getName(), new PortalCooldown(portal, now));
+    }
+
+    @Nullable
+    public Portal getCoolingdownPortal(Player player) {
+        PortalCooldown cooldown = portalCooldown.get(player.getName());
+        if (cooldown == null) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+        if (now < cooldown.timestamp + PortalCooldown.kCooldownMilliSeconds) {
+            return cooldown.portal;
+        }
+        return null;
     }
 
     private void load() {
