@@ -221,39 +221,39 @@ public class PortalCommand {
             if (!(sectionObj instanceof ConfigurationSection)) {
                 continue;
             }
-            ConfigurationSection section = (ConfigurationSection)sectionObj;
+            ConfigurationSection section = (ConfigurationSection) sectionObj;
 
             Object destinationObj = section.get("destination");
-            if (!(destinationObj instanceof  String)) {
+            if (!(destinationObj instanceof String)) {
                 continue;
             }
-            String destination = (String)destinationObj;
+            String destination = (String) destinationObj;
 
             Object blocksObj = section.get("blocks");
             if (!(blocksObj instanceof ArrayList)) {
                 continue;
             }
             ArrayList<Loc> blocks = new ArrayList<>();
-            for (Object locObj : (ArrayList)blocksObj) {
+            for (Object locObj : (ArrayList) blocksObj) {
                 if (!(locObj instanceof HashMap)) {
                     continue;
                 }
-                HashMap<String, Integer> loc = (HashMap)locObj;
+                HashMap<String, Integer> loc = (HashMap) locObj;
                 int x = loc.get("x");
                 int y = loc.get("y");
                 int z = loc.get("z");
                 blocks.add(new Loc(x, y, z));
             }
 
+            Loc returnLoc = null;
             Object returnLocObj = section.get("return_loc");
-            if (!(returnLocObj instanceof ConfigurationSection)) {
-                continue;
+            if (returnLocObj instanceof ConfigurationSection) {
+                ConfigurationSection returnLocSection = (ConfigurationSection) returnLocObj;
+                int x = (Integer) returnLocSection.get("x");
+                int y = (Integer) returnLocSection.get("y");
+                int z = (Integer) returnLocSection.get("z");
+                returnLoc = new Loc(x, y, z);
             }
-            ConfigurationSection returnLoc = (ConfigurationSection)returnLocObj;
-            int x = (Integer)returnLoc.get("x");
-            int y = (Integer)returnLoc.get("y");
-            int z = (Integer)returnLoc.get("z");
-            Loc r = new Loc(x, y, z);
 
             Object worldUUIDObj = section.get("world_uuid");
             if (!(worldUUIDObj instanceof String)) {
@@ -264,7 +264,7 @@ public class PortalCommand {
             if (!storege.containsKey(worldUUID)) {
                 storege.put(worldUUID, new HashMap<>());
             }
-            Portal portal = new Portal(name, r, destination);
+            Portal portal = new Portal(name, returnLoc, destination);
             HashMap<Loc, Portal> target = storege.get(worldUUID);
             for (Loc block : blocks) {
                 target.put(block, portal);
@@ -298,10 +298,12 @@ public class PortalCommand {
                     osw.write("      y: " + loc.y + "\n");
                     osw.write("      z: " + loc.z + "\n");
                 }
-                osw.write("  return_loc:\n");
-                osw.write("    x: " + p.returnLoc.x + "\n");
-                osw.write("    y: " + p.returnLoc.y + "\n");
-                osw.write("    z: " + p.returnLoc.z + "\n");
+                if (p.returnLoc != null) {
+                    osw.write("  return_loc:\n");
+                    osw.write("    x: " + p.returnLoc.x + "\n");
+                    osw.write("    y: " + p.returnLoc.y + "\n");
+                    osw.write("    z: " + p.returnLoc.z + "\n");
+                }
                 osw.write("  destination: \"" + p.destination + "\"\n");
             }
         }
