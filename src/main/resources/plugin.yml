@@ -17,6 +17,6 @@ commands:
   follow:
     usage: follow <Player>
   create_portal:
-    usage: create_portal <name> <returnX> <returnY> <returnZ>
+    usage: create_portal <name> <destinationSserver> <returnX> <returnY> <returnZ>
   delete_portal:
     usage: delete_portal <name>

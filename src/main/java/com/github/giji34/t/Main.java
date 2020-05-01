@@ -1,11 +1,9 @@
 package com.github.giji34.t;
 
-import com.github.giji34.t.command.EditCommand;
-import com.github.giji34.t.command.PortalCommand;
-import com.github.giji34.t.command.TeleportCommand;
-import com.github.giji34.t.command.ToggleGameModeCommand;
+import com.github.giji34.t.command.*;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -20,13 +18,19 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -74,6 +78,7 @@ public class Main extends JavaPlugin implements Listener {
         if (guide != null) {
             guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand,1));
         }
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -205,5 +210,23 @@ public class Main extends JavaPlugin implements Listener {
             e.setCancelled(true);
             return;
         }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) throws IOException {
+        Player player = event.getPlayer();
+        Portal portal = portalCommand.findPortal(player);
+        if (portal == null) {
+            return;
+        }
+        Location returnLoc = new Location(player.getWorld(), portal.returnLoc.x, portal.returnLoc.y, portal.returnLoc.z);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeUTF("Connect");
+        dos.writeUTF(portal.destination);
+        player.teleport(returnLoc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
+        baos.close();
+        dos.close();
     }
 }

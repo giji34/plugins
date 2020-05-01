@@ -2,26 +2,18 @@ package com.github.giji34.t.command;
 
 import com.github.giji34.t.Loc;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.*;
-
-class Portal {
-    final String name;
-    final Loc returnLoc;
-
-    Portal(String name, Loc returnLoc) {
-        this.name = name;
-        this.returnLoc = returnLoc;
-    }
-}
 
 public class PortalCommand {
     final HashMap<UUID, HashMap<Loc, Portal>> storege = new HashMap<>();
@@ -47,15 +39,16 @@ public class PortalCommand {
             player.sendMessage(ChatColor.RED + "ポータルにする範囲を木の斧で選択して下さい");
             return true;
         }
-        if (args.length != 4) {
+        if (args.length != 5) {
             return false;
         }
         String name = args[0];
+        String destination = args[1];
         int x, y, z;
         try {
-            x = Integer.parseInt(args[1]);
-            y = Integer.parseInt(args[2]);
-            z = Integer.parseInt(args[3]);
+            x = Integer.parseInt(args[2]);
+            y = Integer.parseInt(args[3]);
+            z = Integer.parseInt(args[4]);
         } catch (Exception e) {
             player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
             return true;
@@ -77,11 +70,11 @@ public class PortalCommand {
         } else {
             storege.put(worldUUID, new HashMap<>());
         }
-        final HashMap<Loc, Portal> destination = storege.get(worldUUID);
+        final HashMap<Loc, Portal> target = storege.get(worldUUID);
         Loc returnLoc = new Loc(x, y, z);
-        final Portal portal = new Portal(name, returnLoc);
+        final Portal portal = new Portal(name, returnLoc, destination);
         selection.forEach((Loc loc) -> {
-            destination.put(loc, portal);
+            target.put(loc, portal);
             return Boolean.TRUE;
         });
         try {
@@ -129,9 +122,22 @@ public class PortalCommand {
         return true;
     }
 
+    @Nullable
+    public Portal findPortal(Player player) {
+        UUID worldUUID = player.getWorld().getUID();
+        HashMap<Loc, Portal> portals = storege.get(worldUUID);
+        if (portals == null) {
+            return null;
+        }
+        Location loc = player.getLocation();
+        Loc l = new Loc(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+        return portals.get(l);
+    }
+
     private void load() {
         /*
         portal1:
+          destination: "server_name"
           world_uuid: "001E1288-969F-4239-80F3-559384597246"
           blocks:
             - x: 1
@@ -152,7 +158,15 @@ public class PortalCommand {
             if (!(sectionObj instanceof ConfigurationSection)) {
                 continue;
             }
-            Object blocksObj = ((ConfigurationSection)sectionObj).get("blocks");
+            ConfigurationSection section = (ConfigurationSection)sectionObj;
+
+            Object destinationObj = section.get("destination");
+            if (!(destinationObj instanceof  String)) {
+                continue;
+            }
+            String destination = (String)destinationObj;
+
+            Object blocksObj = section.get("blocks");
             if (!(blocksObj instanceof ArrayList)) {
                 continue;
             }
@@ -167,7 +181,8 @@ public class PortalCommand {
                 int z = loc.get("z");
                 blocks.add(new Loc(x, y, z));
             }
-            Object returnLocObj = ((ConfigurationSection)sectionObj).get("return_loc");
+
+            Object returnLocObj = section.get("return_loc");
             if (!(returnLocObj instanceof ConfigurationSection)) {
                 continue;
             }
@@ -176,7 +191,8 @@ public class PortalCommand {
             int y = (Integer)returnLoc.get("y");
             int z = (Integer)returnLoc.get("z");
             Loc r = new Loc(x, y, z);
-            Object worldUUIDObj = ((ConfigurationSection)sectionObj).get("world_uuid");
+
+            Object worldUUIDObj = section.get("world_uuid");
             if (!(worldUUIDObj instanceof String)) {
                 continue;
             }
@@ -185,7 +201,7 @@ public class PortalCommand {
             if (!storege.containsKey(worldUUID)) {
                 storege.put(worldUUID, new HashMap<>());
             }
-            Portal portal = new Portal(name, r);
+            Portal portal = new Portal(name, r, destination);
             HashMap<Loc, Portal> target = storege.get(worldUUID);
             for (Loc block : blocks) {
                 target.put(block, portal);
@@ -223,6 +239,7 @@ public class PortalCommand {
                 osw.write("    x: " + p.returnLoc.x + "\n");
                 osw.write("    y: " + p.returnLoc.y + "\n");
                 osw.write("    z: " + p.returnLoc.z + "\n");
+                osw.write("  destination: \"" + p.destination + "\"\n");
             }
         }
         osw.close();
