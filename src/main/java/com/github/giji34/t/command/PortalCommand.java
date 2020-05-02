@@ -3,13 +3,14 @@ package com.github.giji34.t.command;
 import com.github.giji34.t.Loc;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
@@ -38,11 +39,16 @@ public class PortalCommand {
 
     public void init(File pluginDirectory) {
         this.pluginDirectory = pluginDirectory;
-        this.load();
+        this.loadConfig();
+        this.loadUserStatus();
     }
 
     File getConfigFile() {
         return new File(pluginDirectory, "portals.yml");
+    }
+
+    File getStatusFile() {
+        return new File(pluginDirectory, "user_status.yml");
     }
 
     public boolean create(Player player, String[] args, EditCommand editCommand) {
@@ -94,7 +100,7 @@ public class PortalCommand {
             return Boolean.TRUE;
         });
         try {
-            this.save();
+            this.saveConfig();
         } catch (Exception e) {
             player.sendMessage(ChatColor.RED + "設定ファイル portals.yml の書き込みに失敗しました");
             return true;
@@ -129,7 +135,7 @@ public class PortalCommand {
             return true;
         }
         try {
-            save();
+            saveConfig();
         } catch (Exception e) {
             player.sendMessage(ChatColor.RED + "設定ファイル portals.yml の書き込みに失敗しました");
             return true;
@@ -150,10 +156,25 @@ public class PortalCommand {
         return portals.get(l);
     }
 
+    static String getLocationString(@Nullable Location loc) {
+        if (loc == null) {
+            return "null";
+        }
+        return "(" + loc.getWorld().getUID().toString() + ", " + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ() + ")";
+    }
+
     final HashMap<String, Location> portalReturnLocation = new HashMap<>();
     public void setPortalReturnLocation(Player player, @Nullable Location loc) {
-        //TODO(kbinani): 永続化する
-        portalReturnLocation.put(player.getName(), loc);
+        if (loc == null) {
+            portalReturnLocation.remove(player.getName());
+        } else {
+            portalReturnLocation.put(player.getName(), loc);
+        }
+        try {
+            this.saveUserStatus();
+        } catch (Exception e) {
+            owner.getLogger().warning("user_status.yml の保存に失敗しました: e=" + e);
+        }
     }
 
     @Nullable
@@ -177,10 +198,11 @@ public class PortalCommand {
             return null;
         }
         Portal coolingdown = getCoolingdownPortal(player);
-        if (coolingdown != null) {
+        if (coolingdown == null) {
+            portalCooldown.remove(player.getName());
+        } else {
             portal = null;
         }
-        portalCooldown.remove(player.getName());
         Long anyCooldown = anyPortalCooldown.get(player.getName());
         if (anyCooldown != null) {
             long now = System.currentTimeMillis();
@@ -216,7 +238,7 @@ public class PortalCommand {
         return null;
     }
 
-    private void load() {
+    private void loadConfig() {
         /*
         portal1:
           destination: "server_name"
@@ -253,6 +275,12 @@ public class PortalCommand {
                 continue;
             }
             ArrayList<Loc> blocks = new ArrayList<>();
+            Integer minX = null;
+            Integer maxX = null;
+            Integer minY = null;
+            Integer maxY = null;
+            Integer minZ = null;
+            Integer maxZ = null;
             for (Object locObj : (ArrayList) blocksObj) {
                 if (!(locObj instanceof HashMap)) {
                     continue;
@@ -261,6 +289,12 @@ public class PortalCommand {
                 int x = loc.get("x");
                 int y = loc.get("y");
                 int z = loc.get("z");
+                minX = minX == null ? x : Math.min(minX, x);
+                maxX = maxX == null ? x : Math.max(maxX, x);
+                minY = minY == null ? y : Math.min(minY, y);
+                maxY = maxY == null ? y : Math.max(maxY, y);
+                minZ = minZ == null ? z : Math.min(minZ, z);
+                maxZ = maxZ == null ? z : Math.max(maxZ, z);
                 blocks.add(new Loc(x, y, z));
             }
 
@@ -288,14 +322,15 @@ public class PortalCommand {
             for (Loc block : blocks) {
                 target.put(block, portal);
             }
+            owner.getLogger().info("loadConfig: name=" + name + "; blocks=[" + minX + ", " + minY + ", " + minZ + "]-[" + maxX + ", " + maxY + ", " + maxZ + "]; return_loc=" + (returnLoc == null ? "null" : returnLoc.toString()) + "; world_uuid=" + worldUUIDString);
         }
     }
 
-    private void save() throws Exception {
+    private void saveConfig() throws Exception {
         File configFile = getConfigFile();
         FileOutputStream fos = new FileOutputStream(configFile);
-        BufferedOutputStream bos = new BufferedOutputStream(fos);
-        final OutputStreamWriter osw = new OutputStreamWriter(bos);
+        OutputStreamWriter osw_ = new OutputStreamWriter(fos);
+        final BufferedWriter br = new BufferedWriter(osw_);
         for (UUID worldUUID : storege.keySet()) {
             HashMap<Loc, Portal> portals = storege.get(worldUUID);
             HashSet<String> names = new HashSet<>();
@@ -303,9 +338,12 @@ public class PortalCommand {
                 names.add(portal.name);
             }
             for (String name : names) {
-                osw.write(name + ":\n");
-                osw.write("  world_uuid: \"" + worldUUID.toString() + "\"\n");
-                osw.write("  blocks:\n");
+                br.write(name + ":");
+                br.newLine();
+                br.write("  world_uuid: \"" + worldUUID.toString() + "\"");
+                br.newLine();
+                br.write("  blocks:");
+                br.newLine();
                 Portal p = null;
                 for (Loc loc : portals.keySet()) {
                     Portal portal = portals.get(loc);
@@ -313,19 +351,102 @@ public class PortalCommand {
                         continue;
                     }
                     p = portal;
-                    osw.write("    - x: " + loc.x + "\n");
-                    osw.write("      y: " + loc.y + "\n");
-                    osw.write("      z: " + loc.z + "\n");
+                    br.write("    - x: " + loc.x);
+                    br.newLine();
+                    br.write("      y: " + loc.y);
+                    br.newLine();
+                    br.write("      z: " + loc.z);
+                    br.newLine();
                 }
                 if (p.returnLoc != null) {
-                    osw.write("  return_loc:\n");
-                    osw.write("    x: " + p.returnLoc.x + "\n");
-                    osw.write("    y: " + p.returnLoc.y + "\n");
-                    osw.write("    z: " + p.returnLoc.z + "\n");
+                    br.write("  return_loc:");
+                    br.newLine();
+                    br.write("    x: " + p.returnLoc.x);
+                    br.newLine();
+                    br.write("    y: " + p.returnLoc.y);
+                    br.newLine();
+                    br.write("    z: " + p.returnLoc.z);
+                    br.newLine();
                 }
-                osw.write("  destination: \"" + p.destination + "\"\n");
+                br.write("  destination: \"" + p.destination + "\"");
+                br.newLine();
             }
         }
-        osw.close();
+        br.close();
+    }
+
+    private void loadUserStatus() {
+        /*
+        user1:
+          world_uuid: "6125BB4C-C988-4EEC-A9F4-68EE713478E1"
+          location:
+            x: 1
+            y: 2
+            z: 3
+        */
+        File file = getStatusFile();
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        for (String name : config.getKeys(false)) {
+            Object userObj = config.get(name);
+            if (!(userObj instanceof ConfigurationSection)) {
+                continue;
+            }
+            ConfigurationSection userSec = (ConfigurationSection)userObj;
+            Object worldUUIDObj = userSec.get("world_uuid");
+            if (!(worldUUIDObj instanceof String)) {
+                continue;
+            }
+            UUID worldUUID = UUID.fromString((String)worldUUIDObj);
+            Object locationObj = userSec.get("location");
+            if (!(locationObj instanceof ConfigurationSection)) {
+                continue;
+            }
+            ConfigurationSection locationSec = (ConfigurationSection)locationObj;
+            Object xObj = locationSec.get("x");
+            Object yObj = locationSec.get("y");
+            Object zObj = locationSec.get("z");
+
+            if (!(xObj instanceof Integer) || !(yObj instanceof Integer) || !(zObj instanceof  Integer)) {
+                continue;
+            }
+            int x = (Integer)xObj;
+            int y = (Integer)yObj;
+            int z = (Integer)zObj;
+            World world = owner.getServer().getWorld(worldUUID);
+            if (world == null) {
+                continue;
+            }
+            Location location = new Location(world, x, y, z);
+            portalReturnLocation.put(name, location);
+            owner.getLogger().info("loaded: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ")");
+        }
+    }
+
+    private void saveUserStatus() throws Exception {
+        File file = getStatusFile();
+        FileOutputStream fos = new FileOutputStream(file);
+        OutputStreamWriter osw = new OutputStreamWriter(fos);
+        BufferedWriter br = new BufferedWriter(osw);
+        for (String name : portalReturnLocation.keySet()) {
+            Location location = portalReturnLocation.get(name);
+            br.write(name + ":");
+            br.newLine();
+            UUID worldUUID = location.getWorld().getUID();
+            br.write("  world_uuid: \"" + worldUUID.toString() + "\"");
+            br.newLine();
+            br.write("  location:");
+            br.newLine();
+            int x = location.getBlockX();
+            int y = location.getBlockY();
+            int z = location.getBlockZ();
+            br.write("    x: " + x);
+            br.newLine();
+            br.write("    y: " + y);
+            br.newLine();
+            br.write("    z: " + z);
+            br.newLine();
+            owner.getLogger().info("saved: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ")");
+        }
+        br.close();
     }
 }

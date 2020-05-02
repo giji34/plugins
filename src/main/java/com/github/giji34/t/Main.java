@@ -210,28 +210,32 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) throws IOException {
+    public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         Portal portal = portalCommand.filterPortalByCooldown(player, portalCommand.findPortal(player));
         if (portal == null) {
             return;
         }
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
-        dos.writeUTF("Connect");
-        dos.writeUTF(portal.destination);
-        player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
-        baos.close();
-        dos.close();
         portalCommand.markPortalUsed(player, portal);
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeUTF("Connect");
+            dos.writeUTF(portal.destination);
+            player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
+            baos.close();
+            dos.close();
+        } catch (Exception e) {
+            getLogger().warning("onPlayerMove; io error: e=" + e);
+        }
     }
 
 
     @EventHandler
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        Location loc = portalCommand.getPortalReturnLocation(player);
         portalCommand.setAnyPortalCooldown(player);
+        Location loc = portalCommand.getPortalReturnLocation(player);
         if (loc == null) {
             return;
         }
