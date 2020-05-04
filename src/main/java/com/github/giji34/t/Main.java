@@ -251,7 +251,11 @@ public class Main extends JavaPlugin implements Listener {
         if (portal == null) {
             portalCommand.setPortalReturnLocation(player, null);
         } else if (portal.returnLoc != null) {
-            Location loc = new Location(player.getWorld(), portal.returnLoc.x, portal.returnLoc.y, portal.returnLoc.z);
+            Location loc = player.getLocation();
+            loc.setX(portal.returnLoc.getX());
+            loc.setY(portal.returnLoc.getY());
+            loc.setZ(portal.returnLoc.getZ());
+            loc.setYaw(portal.returnLoc.getYaw());
             portalCommand.setPortalReturnLocation(player, loc);
         }
     }

@@ -57,24 +57,43 @@ public class PortalCommand {
             player.sendMessage(ChatColor.RED + "ポータルにする範囲を木の斧で選択して下さい");
             return true;
         }
-        if (args.length != 2 && args.length != 5) {
+        if (args.length != 2 && args.length != 6) {
             return false;
         }
         String name = args[0];
         String destination = args[1];
-        boolean enableReturnLoc = args.length == 5;
-        Loc returnLoc = null;
+        boolean enableReturnLoc = args.length == 6;
+        Location returnLoc = null;
         if (enableReturnLoc) {
-            int x, y, z;
+            String xStr = args[2];
+            String yStr = args[3];
+            String zStr = args[4];
+            String yawStr = args[5];
+            double x, y, z;
             try {
-                x = Integer.parseInt(args[2]);
-                y = Integer.parseInt(args[3]);
-                z = Integer.parseInt(args[4]);
+                x = Double.parseDouble(xStr);
+                y = Double.parseDouble(yStr);
+                z = Double.parseDouble(zStr);
             } catch (Exception e) {
                 player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
                 return true;
             }
-            returnLoc = new Loc(x, y, z);
+            try {
+                Integer.parseInt(xStr);
+                x += 0.5;
+            } catch (Exception e) {}
+            try {
+                Integer.parseInt(zStr);
+                z += 0.5;
+            } catch (Exception e) {}
+            float yaw;
+            try {
+                yaw = Float.parseFloat(yawStr);
+            } catch (Exception e) {
+                player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
+                return true;
+            }
+            returnLoc = new Location(null, x, y, z, yaw, 0);
         }
         UUID worldUUID = player.getWorld().getUID();
         if (storege.containsKey(worldUUID)) {
@@ -251,9 +270,10 @@ public class PortalCommand {
               y: 2
               z: 4
           return_loc:
-            x: 5
+            x: 5.5
             y: 6
-            z: 7
+            z: 7.5
+            yaw: 180.0
         */
         File configFile = getConfigFile();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
@@ -298,14 +318,31 @@ public class PortalCommand {
                 blocks.add(new Loc(x, y, z));
             }
 
-            Loc returnLoc = null;
+            Location returnLoc = null;
             Object returnLocObj = section.get("return_loc");
             if (returnLocObj instanceof ConfigurationSection) {
                 ConfigurationSection returnLocSection = (ConfigurationSection) returnLocObj;
-                int x = (Integer) returnLocSection.get("x");
-                int y = (Integer) returnLocSection.get("y");
-                int z = (Integer) returnLocSection.get("z");
-                returnLoc = new Loc(x, y, z);
+                Object xObj = returnLocSection.get("x");
+                Object yObj = returnLocSection.get("y");
+                Object zObj = returnLocSection.get("z");
+                Object yawObj = returnLocSection.get("yaw");
+                if (!(xObj instanceof Number) || !(yObj instanceof Number) || !(zObj instanceof  Number)) {
+                    continue;
+                }
+                double x = ((Number)xObj).doubleValue();
+                double y = ((Number)yObj).doubleValue();
+                double z = ((Number)zObj).doubleValue();
+                if (xObj instanceof Integer) {
+                    x += 0.5;
+                }
+                if (zObj instanceof Integer) {
+                    z += 0.5;
+                }
+                float yaw = 0;
+                if (yawObj instanceof Number) {
+                    yaw = ((Number)yawObj).floatValue();
+                }
+                returnLoc = new Location(null, x, y, z, yaw, 0);
             }
 
             Object worldUUIDObj = section.get("world_uuid");
@@ -361,11 +398,13 @@ public class PortalCommand {
                 if (p.returnLoc != null) {
                     br.write("  return_loc:");
                     br.newLine();
-                    br.write("    x: " + p.returnLoc.x);
+                    br.write("    x: " + p.returnLoc .getX());
                     br.newLine();
-                    br.write("    y: " + p.returnLoc.y);
+                    br.write("    y: " + p.returnLoc.getY());
                     br.newLine();
-                    br.write("    z: " + p.returnLoc.z);
+                    br.write("    z: " + p.returnLoc.getZ());
+                    br.newLine();
+                    br.write("    yaw: " + p.returnLoc.getYaw());
                     br.newLine();
                 }
                 br.write("  destination: \"" + p.destination + "\"");
@@ -380,9 +419,10 @@ public class PortalCommand {
         user1:
           world_uuid: "6125BB4C-C988-4EEC-A9F4-68EE713478E1"
           location:
-            x: 1
+            x: 1.5
             y: 2
-            z: 3
+            z: 3.5
+            yaw: 180.0
         */
         File file = getStatusFile();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
@@ -405,20 +445,27 @@ public class PortalCommand {
             Object xObj = locationSec.get("x");
             Object yObj = locationSec.get("y");
             Object zObj = locationSec.get("z");
+            Object yawObj = locationSec.get("yaw");
 
-            if (!(xObj instanceof Integer) || !(yObj instanceof Integer) || !(zObj instanceof  Integer)) {
+            if (!(xObj instanceof Number) || !(yObj instanceof Number) || !(zObj instanceof Number)) {
                 continue;
             }
-            int x = (Integer)xObj;
-            int y = (Integer)yObj;
-            int z = (Integer)zObj;
+            double x = ((Number)xObj).doubleValue();
+            double y = ((Number)yObj).doubleValue();
+            double z = ((Number)zObj).doubleValue();
+
+            float yaw = 0;
+            if (yawObj instanceof Number) {
+                yaw = ((Number)yawObj).floatValue();
+            }
+
             World world = owner.getServer().getWorld(worldUUID);
             if (world == null) {
                 continue;
             }
-            Location location = new Location(world, x, y, z);
+            Location location = new Location(world, x, y, z, yaw, 0);
             portalReturnLocation.put(name, location);
-            owner.getLogger().info("loaded: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ")");
+            owner.getLogger().info("loaded: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ", " + yaw + ", " + "0)");
         }
     }
 
@@ -436,16 +483,19 @@ public class PortalCommand {
             br.newLine();
             br.write("  location:");
             br.newLine();
-            int x = location.getBlockX();
-            int y = location.getBlockY();
-            int z = location.getBlockZ();
+            double x = location.getX();
+            double y = location.getY();
+            double z = location.getZ();
+            float yaw = location.getYaw();
             br.write("    x: " + x);
             br.newLine();
             br.write("    y: " + y);
             br.newLine();
             br.write("    z: " + z);
             br.newLine();
-            owner.getLogger().info("saved: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ")");
+            br.write("    yaw: " + yaw);
+            br.newLine();
+            owner.getLogger().info("saved: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ", " + yaw + ", 0)");
         }
         br.close();
     }
