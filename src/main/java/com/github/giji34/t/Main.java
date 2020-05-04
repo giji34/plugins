@@ -118,6 +118,8 @@ public class Main extends JavaPlugin implements Listener {
                 return portalCommand.create(player, args, editCommand);
             case "delete_portal":
                 return portalCommand.delete(player, args);
+            case "fell_trees":
+                return editCommand.fellTrees(player);
             default:
                 return false;
         }

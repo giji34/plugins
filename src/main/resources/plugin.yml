@@ -20,3 +20,4 @@ commands:
     usage: create_portal <name> <destinationSserver> <returnX> <returnY> <returnZ>
   delete_portal:
     usage: delete_portal <name>
+  fell_trees:

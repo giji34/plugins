@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,6 +30,7 @@ public class EditCommand {
     private UndoOperationRegistry undoOperationRegistry;
     public static final String[] allMaterials;
     private static final int kMaxFillVolume = 4096;
+    private static final HashSet<Material> kTreeMaterials = new HashSet<>();
     private final JavaPlugin owner;
     private File pluginDirectory;
     private String snapshotServerHost;
@@ -52,6 +54,18 @@ public class EditCommand {
                 })
                 .filter(it -> it != null && !"tnt".equals(it))
                 .toArray(String[]::new);
+        kTreeMaterials.add(Material.OAK_LOG);
+        kTreeMaterials.add(Material.OAK_LEAVES);
+        kTreeMaterials.add(Material.BIRCH_LOG);
+        kTreeMaterials.add(Material.BIRCH_LEAVES);
+        kTreeMaterials.add(Material.SPRUCE_LOG);
+        kTreeMaterials.add(Material.SPRUCE_LEAVES);
+        kTreeMaterials.add(Material.ACACIA_LOG);
+        kTreeMaterials.add(Material.ACACIA_LEAVES);
+        kTreeMaterials.add(Material.DARK_OAK_LOG);
+        kTreeMaterials.add(Material.DARK_OAK_LEAVES);
+        kTreeMaterials.add(Material.JUNGLE_LOG);
+        kTreeMaterials.add(Material.JUNGLE_LEAVES);
     }
 
     public EditCommand(JavaPlugin owner) {
@@ -366,6 +380,26 @@ public class EditCommand {
         if (range != null) {
             sendSelectionMessage(player, range);
         }
+    }
+
+    public boolean fellTrees(Player player) {
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
+        if (current == null) {
+            player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
+            return false;
+        }
+        ReplaceOperation op = replaceBlocks(player, current, Material.AIR, (block) -> {
+            Material m = block.getType();
+            return kTreeMaterials.contains(m);
+        });
+        if (op.count() > kMaxFillVolume) {
+            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
+            return false;
+        }
+        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true);
+        player.sendMessage(op.count() + " 個のブロックを air に置き換えました");
+        undoOperationRegistry.push(player, undo);
+        return true;
     }
 
     @Nullable
