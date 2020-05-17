@@ -10,6 +10,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,7 +28,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.IOException;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -187,7 +187,8 @@ public class Main extends JavaPlugin implements Listener {
         }
         CreatureSpawnEvent e = (CreatureSpawnEvent)ese;
         CreatureSpawnEvent.SpawnReason reason = e.getSpawnReason();
-        EntityType entityType = e.getEntity().getType();
+        LivingEntity entity = e.getEntity();
+        EntityType entityType = entity.getType();
         if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
             switch (entityType) {
                 case WITHER:
@@ -201,6 +202,10 @@ public class Main extends JavaPlugin implements Listener {
             e.setCancelled(true);
             getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
             return;
+        }
+        if (entityType == EntityType.ENDERMAN) {
+            // ブロックが移動させられると困るので AI を止める
+            entity.setAI(false);
         }
     }
 
