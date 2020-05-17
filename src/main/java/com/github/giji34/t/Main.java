@@ -204,8 +204,9 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         if (entityType == EntityType.ENDERMAN) {
-            // ブロックが移動させられると困るので AI を止める
-            entity.setAI(false);
+            // ブロックが移動させられると困るのでスポーンを阻止する
+            e.setCancelled(true);
+            return;
         }
     }
 
