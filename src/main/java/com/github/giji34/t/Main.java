@@ -189,24 +189,36 @@ public class Main extends JavaPlugin implements Listener {
         CreatureSpawnEvent.SpawnReason reason = e.getSpawnReason();
         LivingEntity entity = e.getEntity();
         EntityType entityType = entity.getType();
-        if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
-            switch (entityType) {
-                case WITHER:
-                case ENDER_DRAGON:
-                    e.setCancelled(true);
-                    break;
-            }
-            return;
-        }
-        if (reason == CreatureSpawnEvent.SpawnReason.VILLAGE_INVASION) {
-            e.setCancelled(true);
-            getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
-            return;
-        }
-        if (entityType == EntityType.ENDERMAN) {
-            // ブロックが移動させられると困るのでスポーンを阻止する
-            e.setCancelled(true);
-            return;
+        switch (reason) {
+            case SPAWNER_EGG:
+                switch (entityType) {
+                    case WITHER:
+                    case ENDER_DRAGON:
+                        e.setCancelled(true);
+                        break;
+                }
+                return;
+            case VILLAGE_INVASION:
+                e.setCancelled(true);
+                getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
+                return;
+            case NATURAL:
+                switch (entityType) {
+                    case ENDERMAN:
+                        // ブロックが移動させられると困るのでスポーンを阻止する
+                        e.setCancelled(true);
+                        break;
+                    case WANDERING_TRADER:
+                    case TRADER_LLAMA:
+                        // 作業の邪魔なのでスポーンを阻止する
+                        getLogger().info("行商人: " + entityType + " のスポーンをキャンセルしました");
+                        e.setCancelled(true);
+                        break;
+                }
+                return;
+            case BUILD_WITHER:
+                e.setCancelled(true);
+                return;
         }
     }
 
