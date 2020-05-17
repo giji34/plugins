@@ -202,13 +202,6 @@ public class Main extends JavaPlugin implements Listener {
             getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
             return;
         }
-        if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER) {
-            return;
-        }
-        if (reason == CreatureSpawnEvent.SpawnReason.NATURAL) {
-            e.setCancelled(true);
-            return;
-        }
     }
 
     @EventHandler
