@@ -208,6 +208,14 @@ public class Main extends JavaPlugin implements Listener {
                         // ブロックが移動させられると困るのでスポーンを阻止する
                         e.setCancelled(true);
                         break;
+                    case SHEEP:
+                        // 草を土に変える挙動が邪魔なのでスポーンを阻止する
+                        e.setCancelled(true);
+                        break;
+                    case CHICKEN:
+                        // 卵を生成する挙動が邪魔なのでスポーンを阻止する
+                        e.setCancelled(true);
+                        break;
                     case WANDERING_TRADER:
                     case TRADER_LLAMA:
                         // 作業の邪魔なのでスポーンを阻止する
