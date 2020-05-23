@@ -35,6 +35,7 @@ public class Main extends JavaPlugin implements Listener {
     private final EditCommand editCommand = new EditCommand(this);
     private final PortalCommand portalCommand = new PortalCommand(this);
     private Permission permission;
+    private MobSpawnProhibiter mobSpawnProhibiter;
 
     public Main() {
     }
@@ -48,6 +49,7 @@ public class Main extends JavaPlugin implements Listener {
             this.teleportCommand.init(pluginDirectory);
             this.editCommand.init(pluginDirectory);
             this.portalCommand.init(pluginDirectory);
+            this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
         } catch (Exception e) {
             getLogger().warning("error: " + e);
         }
@@ -203,25 +205,17 @@ public class Main extends JavaPlugin implements Listener {
                 getLogger().info("村の襲撃: " + entityType + " のスポーンをキャンセルしました");
                 return;
             case NATURAL:
-                switch (entityType) {
-                    case ENDERMAN:
-                        // ブロックが移動させられると困るのでスポーンを阻止する
-                        e.setCancelled(true);
-                        break;
-                    case SHEEP:
-                        // 草を土に変える挙動が邪魔なのでスポーンを阻止する
-                        e.setCancelled(true);
-                        break;
-                    case CHICKEN:
-                        // 卵を生成する挙動が邪魔なのでスポーンを阻止する
-                        e.setCancelled(true);
-                        break;
-                    case WANDERING_TRADER:
-                    case TRADER_LLAMA:
-                        // 作業の邪魔なのでスポーンを阻止する
-                        getLogger().info("行商人: " + entityType + " のスポーンをキャンセルしました");
-                        e.setCancelled(true);
-                        break;
+                if (this.mobSpawnProhibiter.isMobSpawnAllowed(e.getLocation())) {
+                    switch (entityType) {
+                        case WANDERING_TRADER:
+                        case TRADER_LLAMA:
+                            // 作業の邪魔なのでスポーンを阻止する
+                            getLogger().info("行商人: " + entityType + " のスポーンをキャンセルしました");
+                            e.setCancelled(true);
+                            break;
+                    }
+                } else {
+                    e.setCancelled(true);
                 }
                 return;
             case BUILD_WITHER:
