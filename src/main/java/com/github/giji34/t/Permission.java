@@ -55,7 +55,7 @@ public class Permission {
                             commands.add((String) cmd);
                         }
                     }
-                    Role role = new Role(commands);
+                    Role role = new Role(name, commands);
                     this.roles.put(name, role);
                 }
             }
@@ -96,12 +96,23 @@ public class Permission {
         User user = this.users.get(name);
         return user.hasPermission(command);
     }
+
+    boolean hasRole(Player player, String role) {
+        String name = player.getName();
+        if (!this.users.containsKey(name)) {
+            return false;
+        }
+        User user = this.users.get(name);
+        return user.hasRole(role);
+    }
 }
 
 class Role {
+    final String name;
     final HashSet<String> commands;
 
-    Role(List<String> commands) {
+    Role(String name, List<String> commands) {
+        this.name = name;
         this.commands = new HashSet<>(commands);
     }
 
@@ -120,6 +131,15 @@ class User {
     boolean hasPermission(String cmd) {
         for (Role role : roles) {
             if (role.hasPermission(cmd)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    boolean hasRole(String role) {
+        for (Role r : roles) {
+            if (r.name.equals(role)) {
                 return true;
             }
         }

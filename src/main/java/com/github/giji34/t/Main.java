@@ -9,6 +9,7 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -135,37 +136,101 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
-        if (invalidGameMode(player)) {
-            return;
-        }
-        if (!e.hasItem()) {
-            return;
-        }
-        ItemStack tool = e.getItem();
-        if (tool == null) {
-            return;
-        }
-        if (tool.getType() != Material.WOODEN_AXE) {
-            return;
-        }
-        Block block = e.getClickedBlock();
-        if (block == null) {
-            return;
-        }
-        EquipmentSlot hand = e.getHand();
-        if (hand != EquipmentSlot.HAND) {
-            return;
-        }
-        Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-        Action action = e.getAction();
-        if (action == Action.LEFT_CLICK_BLOCK) {
-            editCommand.setSelectionStartBlock(player, loc);
-        } else if (action == Action.RIGHT_CLICK_BLOCK) {
-            editCommand.setSelectionEndBlock(player, loc);
+        if (this.permission.hasRole(player, "member")) {
+            if (invalidGameMode(player)) {
+                return;
+            }
+            if (!e.hasItem()) {
+                return;
+            }
+            ItemStack tool = e.getItem();
+            if (tool == null) {
+                return;
+            }
+            if (tool.getType() != Material.WOODEN_AXE) {
+                return;
+            }
+            Block block = e.getClickedBlock();
+            if (block == null) {
+                return;
+            }
+            EquipmentSlot hand = e.getHand();
+            if (hand != EquipmentSlot.HAND) {
+                return;
+            }
+            Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+            Action action = e.getAction();
+            if (action == Action.LEFT_CLICK_BLOCK) {
+                editCommand.setSelectionStartBlock(player, loc);
+            } else if (action == Action.RIGHT_CLICK_BLOCK) {
+                editCommand.setSelectionEndBlock(player, loc);
+            } else {
+                return;
+            }
+            e.setCancelled(true);
         } else {
-            return;
+            if (this.shouldRejectInteraction(e)) {
+                e.setCancelled(true);
+            }
         }
-        e.setCancelled(true);
+    }
+
+    private boolean shouldRejectInteraction(PlayerInteractEvent e) {
+        Action action = e.getAction();
+        Block block = e.getClickedBlock();
+        Player player = e.getPlayer();
+        switch (action) {
+            case PHYSICAL: {
+                if (block == null) {
+                    return true;
+                }
+                Material material = block.getType();
+                if (material.isInteractable()) {
+                    return false;
+                }
+                switch (material) {
+                    case FARMLAND:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+            case RIGHT_CLICK_BLOCK: {
+                if (block == null) {
+                    return true;
+                }
+                if (player.isSneaking()) {
+                    return true;
+                }
+                Material material = block.getType();
+                switch (material) {
+                    case CAKE:
+                    case DISPENSER:
+                        return true;
+                    case RAIL:
+                    case POWERED_RAIL:
+                    case ACTIVATOR_RAIL:
+                    case DETECTOR_RAIL:
+                        if (!e.hasItem()) {
+                            return true;
+                        }
+                        ItemStack itemStack = e.getItem();
+                        if (itemStack.getType() == Material.MINECART) {
+                            return false;
+                        }
+                        return true;
+                }
+                if (MaterialHelper.isBoat(e.getMaterial()) && e.getHand() == EquipmentSlot.HAND) {
+                    return false;
+                }
+                if (material.isInteractable()) {
+                    return false;
+                }
+                return true;
+            }
+            default:
+                return true;
+        }
     }
 
     @EventHandler
@@ -270,6 +335,24 @@ public class Main extends JavaPlugin implements Listener {
             loc.setZ(portal.returnLoc.getZ());
             loc.setYaw(portal.returnLoc.getYaw());
             portalCommand.setPortalReturnLocation(player, loc);
+        }
+    }
+}
+
+class MaterialHelper {
+    private MaterialHelper() {}
+
+    static boolean isBoat(Material m) {
+        switch (m) {
+            case OAK_BOAT:
+            case SPRUCE_BOAT:
+            case BIRCH_BOAT:
+            case JUNGLE_BOAT:
+            case ACACIA_BOAT:
+            case DARK_OAK_BOAT:
+                return true;
+            default:
+                return false;
         }
     }
 }
