@@ -294,7 +294,7 @@ public class EditCommand {
                 }
             }
             final HashMap<Material, Integer>[] foundMaterials = materials;
-            world.generateTree(new Location(world, start.x, start.y + 1, start.z), treeType, new BlockChangeDelegate() {
+            boolean ok = world.generateTree(new Location(world, start.x, start.y + 1, start.z), treeType, new BlockChangeDelegate() {
                 @Override
                 public boolean setBlockData(int x, int y, int z, @NotNull BlockData blockData) {
                     op.register(new Loc(x, y, z), new ReplaceData(blockData.getAsString(true)));
@@ -326,7 +326,9 @@ public class EditCommand {
                     return world.getBlockAt(x, y, z).isEmpty();
                 }
             });
-            boolean ok = true;
+            if (!ok) {
+                continue;
+            }
             if (logLength >= 0) {
                 for (int y = 0; y <= logLength; y++) {
                     int numLeaveLikeBlocks = 0;
