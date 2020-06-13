@@ -123,6 +123,8 @@ public class Main extends JavaPlugin implements Listener {
                 return portalCommand.delete(player, args);
             case "fell_trees":
                 return editCommand.fellTrees(player);
+            case "/chunk":
+                return editCommand.chunk(player);
             default:
                 return false;
         }

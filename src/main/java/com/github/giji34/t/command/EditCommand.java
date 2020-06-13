@@ -404,6 +404,22 @@ public class EditCommand {
         return true;
     }
 
+    public boolean chunk(Player player) {
+        Location location = player.getLocation();
+        int x = location.getBlockX();
+        int z = location.getBlockZ();
+        World world = player.getWorld();
+        int chunkX = x >> 4;
+        int chunkZ = z >> 4;
+        int minX = chunkX * 16;
+        int minZ = chunkZ * 16;
+        int maxX = minX + 15;
+        int maxZ = minZ + 15;
+        this.selectedBlockRangeRegistry.setStart(player, new Loc(minX, 0, minZ));
+        this.selectedBlockRangeRegistry.setEnd(player, new Loc(maxX, world.getMaxHeight() - 1, maxZ));
+        return true;
+    }
+
     @Nullable
     public BlockRange getCurrentSelection(Player player) {
         return selectedBlockRangeRegistry.current(player);

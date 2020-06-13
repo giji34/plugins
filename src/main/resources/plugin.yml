@@ -21,3 +21,5 @@ commands:
   delete_portal:
     usage: delete_portal <name>
   fell_trees:
+  /chunk:
+    usage: //chunk
