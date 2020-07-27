@@ -5,19 +5,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class ReplaceData {
     final Material material;
-    @Nullable
-    final String data;
+    @Nullable final String data;
+    @Nullable final String biome;
 
-    ReplaceData(Material material, @Nullable String data) {
-        this.material = material;
-        if (data != null && !data.isEmpty()) {
-            this.data = data;
-        } else {
-            this.data = null;
-        }
-    }
-
-    ReplaceData(String blockData) {
+    ReplaceData(String blockData, @Nullable String biome) {
         int begin = blockData.indexOf("[");
         int end = blockData.indexOf("]");
         if (begin > 0 && end > 0) {
@@ -28,6 +19,7 @@ public class ReplaceData {
             this.material = Material.matchMaterial(blockData);
             this.data = null;
         }
+        this.biome = biome;
     }
 
     String getAsString() {

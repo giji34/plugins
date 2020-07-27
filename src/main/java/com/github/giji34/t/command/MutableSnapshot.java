@@ -10,20 +10,23 @@ class MutableSnapshot implements Snapshot {
     final BlockRange range;
     @Nullable String errorMessage;
     final String[] blockData;
+    final String[] biomes;
 
     MutableSnapshot(BlockRange range) {
         this.range = range;
         this.blockData = new String[range.volume()];
+        this.biomes = new String[range.volume()];
     }
 
     void setErrorMessage(@NotNull String s) {
         this.errorMessage = s;
     }
 
-    void setBlockData(int x, int y, int z, String blockData) {
+    void set(int x, int y, int z, @NotNull String blockData, @Nullable String biome) {
         final int idx = getIndex(x, y, z);
         if (0 <= idx && idx < this.blockData.length) {
             this.blockData[idx] = blockData;
+            this.biomes[idx] = biome;
         }
     }
 
@@ -47,6 +50,16 @@ class MutableSnapshot implements Snapshot {
                 return  null;
             }
             return server.createBlockData(bd);
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public @Nullable String biomeAt(Loc loc) {
+        final int idx = getIndex(loc.x, loc.y, loc.z);
+        if (0 <= idx && idx < this.biomes.length) {
+            return this.biomes[idx];
         } else {
             return null;
         }

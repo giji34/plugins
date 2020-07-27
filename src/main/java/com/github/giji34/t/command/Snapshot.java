@@ -9,5 +9,6 @@ import org.jetbrains.annotations.Nullable;
 interface Snapshot {
     @NotNull BlockRange getRange();
     @Nullable BlockData blockAt(Loc loc, Server server);
+    @Nullable String biomeAt(Loc loc);
     @Nullable String getErrorMessage();
 }

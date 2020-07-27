@@ -18,10 +18,4 @@ public class SnapshotServerResponse {
     public String status;
     public PaletteAndIndices block;
     public PaletteAndIndices biome;
-
-    public SnapshotServerResponse(String status, PaletteAndIndices block, PaletteAndIndices biome) {
-        this.status = status;
-        this.block = block;
-        this.biome = biome;
-    }
 }

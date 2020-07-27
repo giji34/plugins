@@ -1,7 +1,9 @@
 package com.github.giji34.t.command;
 
+import com.github.giji34.t.BiomeHelper;
 import com.github.giji34.t.Loc;
 import org.bukkit.*;
+import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Leaves;
@@ -235,8 +237,24 @@ public class EditCommand {
                 return false;
             }
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            String opBlock = null;
             if (!block.getBlockData().matches(bd)) {
-                operation.register(loc, new ReplaceData(bd.getAsString()));
+                opBlock = bd.getAsString();
+            }
+            String opBiome = null;
+            String biome = s.biomeAt(loc);
+            if (biome != null) {
+                Biome beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
+                Biome afterBiome = BiomeHelper.Resolve(biome, owner.getServer());
+                if (afterBiome != null && beforeBiome != afterBiome) {
+                    opBiome = biome;
+                }
+            }
+            if (opBlock != null || opBiome != null) {
+                if (opBlock == null) {
+                    opBlock = block.getBlockData().getAsString(true);
+                }
+                operation.register(loc, new ReplaceData(opBlock, opBiome));
             }
             return true;
         });
@@ -297,7 +315,7 @@ public class EditCommand {
             boolean ok = world.generateTree(new Location(world, start.x, start.y + 1, start.z), treeType, new BlockChangeDelegate() {
                 @Override
                 public boolean setBlockData(int x, int y, int z, @NotNull BlockData blockData) {
-                    op.register(new Loc(x, y, z), new ReplaceData(blockData.getAsString(true)));
+                    op.register(new Loc(x, y, z), new ReplaceData(blockData.getAsString(true), null));
                     Material material = blockData.getMaterial();
                     int height = y - start.y - 1;
                     if (0 <= height && height < foundMaterials.length) {
@@ -443,7 +461,7 @@ public class EditCommand {
             }
             data = MergeBlockData(from.getBlockData().getAsString(true), data, server);
             if (predicate.apply(from)) {
-                operation.register(loc, new ReplaceData(data));
+                operation.register(loc, new ReplaceData(data, null));
             }
             return true;
         });
