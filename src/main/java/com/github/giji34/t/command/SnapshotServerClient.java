@@ -93,7 +93,7 @@ class SnapshotServerClient {
         for (int y = range.getMinY(); y <= range.getMaxY(); y++) {
             for (int z = range.getMinZ(); z <= range.getMaxZ(); z++) {
                 for (int x = range.getMinX(); x <= range.getMaxX(); x++) {
-                    final String blockData = response.palette[response.blocks[idx]];
+                    final String blockData = response.block.palette[response.block.indices[idx]];
                     snapshot.setBlockData(x, y, z, ResolveNamespacedId(blockData));
                     idx++;
                 }

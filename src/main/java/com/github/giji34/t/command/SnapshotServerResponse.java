@@ -2,20 +2,26 @@ package com.github.giji34.t.command;
 
 /**
  {
- status: string,
- palette: string[], // [ "minecraft:oak_slab[type=bottom,water_logged:true]", ... ]
- blocks: number[] // for(y){for(z){for(x){}}} の順で格納. palette[blocks[i]] で BlockData を取得する.
+   status: string,
+   block:{
+     palette: string[], [ "minecraft:oak_slab[type=bottom,water_logged:true]", ... ]
+     indices: number[], for(y){for(z){for(x){}}} の順で格納. palette[blocks[i]] で BlockData を取得する.
+   },
+   biome: {
+     palette: string[],
+     indices: number[],
+   }
  }
  */
 
 public class SnapshotServerResponse {
     public String status;
-    public String[] palette;
-    public int[] blocks;
+    public PaletteAndIndices block;
+    public PaletteAndIndices biome;
 
-    public SnapshotServerResponse(String status, String[] palette, int[] blocks) {
+    public SnapshotServerResponse(String status, PaletteAndIndices block, PaletteAndIndices biome) {
         this.status = status;
-        this.palette = palette;
-        this.blocks = blocks;
+        this.block = block;
+        this.biome = biome;
     }
 }
