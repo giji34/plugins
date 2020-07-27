@@ -252,11 +252,7 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onEntitySpawn(EntitySpawnEvent ese) {
-        if (!(ese instanceof CreatureSpawnEvent)) {
-            return;
-        }
-        CreatureSpawnEvent e = (CreatureSpawnEvent)ese;
+    public void onCreatureSpawnSpawn(CreatureSpawnEvent e) {
         CreatureSpawnEvent.SpawnReason reason = e.getSpawnReason();
         LivingEntity entity = e.getEntity();
         EntityType entityType = entity.getType();
