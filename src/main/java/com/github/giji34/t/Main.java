@@ -24,11 +24,14 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.util.ArrayList;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -314,12 +317,30 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        addPotionEffects(player);
         portalCommand.setAnyPortalCooldown(player);
         Location loc = portalCommand.getPortalReturnLocation(player);
         if (loc == null) {
             return;
         }
         player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+    }
+
+    private void addPotionEffects(Player player) {
+        ArrayList<PotionEffect> effects = new ArrayList<PotionEffect>();
+        int duration = 7 * 24 * 60 * 60 * 20;
+        int amplifier = 0;
+        boolean ambient = false;
+        boolean particles = false;
+        PotionEffect nightVision = new PotionEffect(PotionEffectType.NIGHT_VISION, duration, amplifier, ambient, particles);
+        PotionEffect saturation = new PotionEffect(PotionEffectType.SATURATION, duration, amplifier, ambient, particles);
+        PotionEffect instantHealth = new PotionEffect(PotionEffectType.HEAL, duration, amplifier, ambient, particles);
+        effects.add(nightVision);
+        effects.add(saturation);
+        effects.add(instantHealth);
+        if (!player.addPotionEffects(effects)) {
+            getLogger().warning("failed adding portion effects for player: " + player.getName());
+        }
     }
 
     @EventHandler
