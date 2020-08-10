@@ -1,4 +1,5 @@
 api-version: 1.15
+version: @version@
 commands:
   tpl:
     uasge: giji34:tpl <X> <Y> <Z>

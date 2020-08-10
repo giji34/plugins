@@ -1,13 +1,27 @@
-plugins {
-    id "ru.endlesscode.bukkitgradle" version "0.8.2"
+import org.apache.tools.ant.filters.ReplaceTokens
+
+apply plugin: 'java'
+
+group = 'com.github.giji34'
+version = '0.1'
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'spigotmc-repo'
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+    maven {
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
+    }
 }
 
-group "com.github.giji34"
-description "Custom server plugin for giji34"
-version "0.1"
-
 dependencies {
-    compileOnly bukkit()
+    compileOnly 'org.spigotmc:spigot-api:1.16.1-R0.1-SNAPSHOT'
     compileOnly 'org.jetbrains:annotations:16.0.2'
 }
 
@@ -15,11 +29,8 @@ wrapper {
     gradleVersion = '6.2.2'
 }
 
-bukkit {
-	version = "1.15.2"
-    meta {
-        authors = ["kbinani"]
-        name = project.name
-        main = "com.github.giji34.t.Main"
+processResources {
+    from(sourceSets.main.resources.srcDirs) {
+        filter ReplaceTokens, tokens: [version: version]
     }
 }
