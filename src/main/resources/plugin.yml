@@ -1,5 +1,7 @@
+name: giji34
 api-version: 1.15
 version: @version@
+main: com.github.giji34.t.Main
 commands:
   tpl:
     uasge: giji34:tpl <X> <Y> <Z>
