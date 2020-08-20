@@ -335,7 +335,9 @@ public class Main extends JavaPlugin implements Listener {
         PotionEffect nightVision = new PotionEffect(PotionEffectType.NIGHT_VISION, duration, amplifier, ambient, particles);
         PotionEffect saturation = new PotionEffect(PotionEffectType.SATURATION, duration, amplifier, ambient, particles);
         PotionEffect instantHealth = new PotionEffect(PotionEffectType.HEAL, duration, amplifier, ambient, particles);
-        effects.add(nightVision);
+        if (permission.hasRole(player, "member")) {
+            effects.add(nightVision);
+        }
         effects.add(saturation);
         effects.add(instantHealth);
         if (!player.addPotionEffects(effects)) {
