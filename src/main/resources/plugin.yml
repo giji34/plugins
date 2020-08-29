@@ -26,3 +26,4 @@ commands:
   fell_trees:
   /chunk:
     usage: //chunk
+  uuid:

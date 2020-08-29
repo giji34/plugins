@@ -1,10 +1,7 @@
 package com.github.giji34.t;
 
 import com.github.giji34.t.command.*;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -128,6 +125,10 @@ public class Main extends JavaPlugin implements Listener {
                 return editCommand.fellTrees(player);
             case "/chunk":
                 return editCommand.chunk(player);
+            case "uuid":
+                World world = player.getWorld();
+                getLogger().info(world.getName() + ":" + world.getUID().toString());
+                return true;
             default:
                 return false;
         }
