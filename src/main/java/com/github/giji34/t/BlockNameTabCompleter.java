@@ -25,7 +25,7 @@ class BlockNameTabCompleter implements TabCompleter {
         if ("".equals(name)) {
             return blocks;
         }
-        blocks.removeIf(it -> !it.startsWith(name));
+        blocks.removeIf(it -> !it.startsWith(name) && !it.replace("_", "").startsWith(name));
         return blocks;
     }
 }
