@@ -107,23 +107,35 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
         }
+        BlockData toBlockData = null;
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED + "ブロック名を指定してください (例: /gfill dirt)");
+            Block block = player.getTargetBlockExact(5, FluidCollisionMode.NEVER);
+            if (block == null) {
+                player.sendMessage(ChatColor.RED + "fill したいブロックと同素材のブロックをターゲットするか、ブロック名を指定して下さい");
+                return true;
+            }
+            toBlockData = block.getBlockData();
+        } else if (args.length == 1) {
+            String name = args[0];
+            final Material material = Material.matchMaterial("minecraft:" + name);
+            if (material == null) {
+                player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
+                return true;
+            }
+            toBlockData = player.getServer().createBlockData(material);
+        }
+        if (toBlockData == null) {
+            owner.getLogger().warning("toBlockData が null. args.length=" + args.length);
             return false;
         }
-        String name = args[0];
-        final Material material = Material.matchMaterial("minecraft:" + name);
-        if (material == null) {
-            player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
-            return false;
-        }
-        ReplaceOperation operation = replaceBlocks(player, current, material, (block) -> !block.getType().equals(material));
+        final String toBlockDataString = toBlockData.getAsString(false);
+        ReplaceOperation operation = replaceBlocks(player, current, toBlockData, (block) -> !block.getBlockData().getAsString(false).equals(toBlockDataString));
         if (operation.count() > kMaxFillVolume) {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
-            return false;
+            return true;
         }
         ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true);
-        player.sendMessage(operation.count() + " 個の " + name + " ブロックを設置しました");
+        player.sendMessage(operation.count() + " 個の " + toBlockData.getAsString(true) + " ブロックを設置しました");
         undoOperationRegistry.push(player, undo);
         return true;
     }
@@ -146,7 +158,8 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "ブロック名が正しくありません");
             return false;
         }
-        ReplaceOperation op = replaceBlocks(player, current, toMaterial, (block) -> {
+        BlockData toBlockData = player.getServer().createBlockData(toMaterial);
+        ReplaceOperation op = replaceBlocks(player, current, toBlockData, (block) -> {
             if (!block.getType().equals(fromMaterial)) {
                 return false;
             }
@@ -408,7 +421,8 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
         }
-        ReplaceOperation op = replaceBlocks(player, current, Material.AIR, (block) -> {
+        BlockData air = player.getServer().createBlockData(Material.AIR);
+        ReplaceOperation op = replaceBlocks(player, current, air, (block) -> {
             Material m = block.getType();
             return kTreeMaterials.contains(m);
         });
@@ -448,18 +462,17 @@ public class EditCommand {
     }
 
     @NotNull
-    private ReplaceOperation replaceBlocks(Player player, BlockRange range, Material toMaterial, Function<Block, Boolean> predicate) {
+    private ReplaceOperation replaceBlocks(Player player, BlockRange range, BlockData toBlockData, Function<Block, Boolean> predicate) {
         World world = player.getWorld();
         final ReplaceOperation operation = new ReplaceOperation(player.getWorld());
         final Server server = player.getServer();
         range.forEach(loc -> {
             Block from = world.getBlockAt(loc.x, loc.y, loc.z);
-            BlockData toBlockData = server.createBlockData(toMaterial);
-            String data = toMaterial.getKey().toString();
-            if (toBlockData instanceof Leaves) {
-                data += "[persistent=true]";
-            }
+            String data = toBlockData.getAsString(true);
             data = MergeBlockData(from.getBlockData().getAsString(true), data, server);
+            if (toBlockData instanceof Leaves) {
+                data = MergeBlockData(data, toBlockData.getMaterial().getKey().toString() + "[persistent=true]", server);
+            }
             if (predicate.apply(from)) {
                 operation.register(loc, new ReplaceData(data, null));
             }
