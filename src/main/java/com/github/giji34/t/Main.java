@@ -314,7 +314,6 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
-
     @EventHandler
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -325,6 +324,14 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+    }
+
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        final Player player = event.getPlayer();
+        player.getServer().getScheduler().runTaskLater(this, () -> {
+            addPotionEffects(player);
+        }, 40);
     }
 
     private void addPotionEffects(Player player) {
