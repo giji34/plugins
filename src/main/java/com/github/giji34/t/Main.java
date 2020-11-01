@@ -318,12 +318,24 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         addPotionEffects(player);
-        portalCommand.setAnyPortalCooldown(player);
-        Location loc = portalCommand.getPortalReturnLocation(player);
-        if (loc == null) {
-            return;
+        if (this.permission.hasRole(player, "member")) {
+            portalCommand.setAnyPortalCooldown(player);
+
+            Location loc = portalCommand.getPortalReturnLocation(player);
+            if (loc == null) {
+                return;
+            }
+            player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        } else {
+            Server server = player.getServer();
+            for (World world : server.getWorlds()) {
+                if (world.getEnvironment() == World.Environment.NORMAL) {
+                    Location loc = world.getSpawnLocation();
+                    player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                    break;
+                }
+            }
         }
-        player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
     }
 
     @EventHandler
