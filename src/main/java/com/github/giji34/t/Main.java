@@ -6,7 +6,6 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -15,11 +14,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -29,6 +29,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -220,7 +222,7 @@ public class Main extends JavaPlugin implements Listener {
                             return true;
                         }
                         ItemStack itemStack = e.getItem();
-                        if (itemStack.getType() == Material.MINECART) {
+                        if (itemStack != null && itemStack.getType() == Material.MINECART) {
                             return false;
                         }
                         return true;
@@ -236,8 +238,30 @@ public class Main extends JavaPlugin implements Listener {
                 }
                 return true;
             }
+            case RIGHT_CLICK_AIR:
+                if (!e.hasItem()) {
+                    return true;
+                }
+                ItemStack itemStack = e.getItem();
+                if (itemStack != null && itemStack.getType() == Material.FIREWORK_ROCKET) {
+                    ItemStack maybeElytra = player.getInventory().getChestplate();
+                    if (maybeElytra != null && maybeElytra.getType() == Material.ELYTRA) {
+                        Repair(maybeElytra);
+                    }
+                    return false;
+                }
+                return true;
             default:
                 return true;
+        }
+    }
+
+    static void Repair(@NotNull ItemStack item) {
+        ItemMeta itemMeta = item.getItemMeta();
+        if (itemMeta instanceof Damageable) {
+            Damageable damageable = (Damageable)itemMeta;
+            damageable.setDamage(0);
+            item.setItemMeta(itemMeta);
         }
     }
 
@@ -335,6 +359,46 @@ public class Main extends JavaPlugin implements Listener {
                     break;
                 }
             }
+            server.getScheduler().runTaskLater(this, () -> {
+                AtomicBoolean hasDiamondSword = new AtomicBoolean(false);
+                AtomicBoolean hasMinecart = new AtomicBoolean(false);
+                AtomicBoolean hasBoat = new AtomicBoolean(false);
+                AtomicBoolean hasElytra = new AtomicBoolean(false);
+                AtomicInteger numFireworkRocket = new AtomicInteger(0);
+                player.getInventory().forEach((itemStack -> {
+                    if (itemStack == null) return;
+                    Material material = itemStack.getType();
+                    if (material == Material.DIAMOND_SWORD) {
+                        Repair(itemStack);
+                        hasDiamondSword.set(true);
+                    } else if (MaterialHelper.isBoat(material)) {
+                        hasBoat.set(true);
+                    } else if (material == Material.MINECART) {
+                        hasMinecart.set(true);
+                    } else if (material == Material.ELYTRA) {
+                        Repair(itemStack);
+                        hasElytra.set(true);
+                    } else if (material == Material.FIREWORK_ROCKET) {
+                        numFireworkRocket.addAndGet(itemStack.getAmount());
+                    }
+                }));
+                if (!hasDiamondSword.get()) {
+                    player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD));
+                }
+                if (!hasBoat.get()) {
+                    player.getInventory().addItem(new ItemStack(Material.OAK_BOAT));
+                }
+                if (!hasMinecart.get()) {
+                    player.getInventory().addItem(new ItemStack(Material.MINECART));
+                }
+                if (!hasElytra.get()) {
+                    player.getInventory().addItem(new ItemStack(Material.ELYTRA));
+                }
+                if (numFireworkRocket.get() < 128) {
+                    int num = 128 - numFireworkRocket.get();
+                    player.getInventory().addItem(new ItemStack(Material.FIREWORK_ROCKET, num));
+                }
+            }, 40);
         }
     }
 
