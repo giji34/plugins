@@ -1,4 +1,4 @@
-VERSION := 0.1
+VERSION := 0.2.0
 
 build/libs/giji34-$(VERSION).jar: build.gradle $(shell find ./src/main -type f -print)
 	./gradlew assemble
@@ -6,6 +6,8 @@ build/libs/giji34-$(VERSION).jar: build.gradle $(shell find ./src/main -type f -
 
 .PHONY: deploy
 deploy: build/libs/giji34-$(VERSION).jar
-	scp $^ giji34:minecraft/plugins/
-	scp $^ world06:world06/plugins/
-	scp $^ world06:hololive_01/plugins/
+	scp $^ main.giji34:jar/giji34/
+
+.PHONY: clean
+clean:
+	rm -f build/libs/giji34-$(VERSION).jar

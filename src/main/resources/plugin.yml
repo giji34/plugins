@@ -27,3 +27,4 @@ commands:
   /chunk:
     usage: //chunk
   uuid:
+  connect:

@@ -131,6 +131,8 @@ public class Main extends JavaPlugin implements Listener {
                 World world = player.getWorld();
                 getLogger().info(world.getName() + ":" + world.getUID().toString());
                 return true;
+            case "connect":
+                return this.handleConnectCommand(player, args);
             default:
                 return false;
         }
@@ -326,13 +328,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         portalCommand.markPortalUsed(player, portal);
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
-            dos.writeUTF("Connect");
-            dos.writeUTF(portal.destination);
-            player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
-            baos.close();
-            dos.close();
+            this.connect(player, portal.destination);
         } catch (Exception e) {
             getLogger().warning("onPlayerMove; io error: e=" + e);
         }
@@ -445,6 +441,33 @@ public class Main extends JavaPlugin implements Listener {
             loc.setYaw(portal.returnLoc.getYaw());
             portalCommand.setPortalReturnLocation(player, loc);
         }
+    }
+
+    private boolean handleConnectCommand(Player player, String[] args) {
+        if (args.length != 1) {
+            player.sendMessage(ChatColor.RED + "接続先を指定してください. (例) /connect main");
+            return false;
+        }
+        String destination = args[0];
+        try {
+            this.connect(player, destination);
+        } catch (Exception e) {
+            player.sendMessage(ChatColor.RED + destination + " に接続できませんでした");
+            getLogger().warning(player.getName() + " failed connecting server " + destination);
+            return false;
+        }
+        player.sendMessage(destination + " に接続しています...");
+        return true;
+    }
+
+    private void connect(Player player, String destination) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeUTF("Connect");
+        dos.writeUTF(destination);
+        player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
+        baos.close();
+        dos.close();
     }
 }
 
