@@ -6,6 +6,7 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -14,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -468,6 +470,30 @@ public class Main extends JavaPlugin implements Listener {
         player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
         baos.close();
         dos.close();
+    }
+
+    @EventHandler
+    public void onEntityPotionEffect(EntityPotionEffectEvent e) {
+        EntityPotionEffectEvent.Cause cause = e.getCause();
+        if (cause != EntityPotionEffectEvent.Cause.BEACON) {
+            return;
+        }
+        Entity entity = e.getEntity();
+        if (e.getEntityType() != EntityType.PLAYER) {
+            return;
+        }
+        if (!(entity instanceof Player)) {
+            return;
+        }
+        Player player = (Player)entity;
+        if (!this.permission.hasRole(player, "member")) {
+            return;
+        }
+        GameMode gameMode = player.getGameMode();
+        if (gameMode != GameMode.CREATIVE) {
+            return;
+        }
+        e.setCancelled(true);
     }
 }
 
