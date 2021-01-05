@@ -190,8 +190,9 @@ public class EditCommand {
     }
 
     public boolean regenerate(Player player, String[] args) {
-        BlockRange current = this.selectedBlockRangeRegistry.current(player);
+        final BlockRange current = this.selectedBlockRangeRegistry.current(player);
         if (current == null) {
+            player.getLocale();
             player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
             return false;
         }
@@ -210,11 +211,12 @@ public class EditCommand {
                 dimension = 0;
                 break;
         }
-        Snapshot snapshot = null;
         String info = "";
+        Function<Integer, Snapshot> snapshotGetter = null;
+        final int finalDimension = dimension;
         if (args.length == 2) {
             String dateString = args[0] + " " + args[1];
-            SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
+            final SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
             OffsetDateTime date = null;
             try {
                 date = ParseDateString(dateString);
@@ -223,61 +225,71 @@ public class EditCommand {
                 player.sendMessage(ChatColor.RED + "日付のフォーマットが不正です(例: 2020-03-20 16:31");
                 return true;
             }
-            snapshot = client.getBackupSnapshot(date, dimension, current);
+            final OffsetDateTime finalDate = date;
+            snapshotGetter = (Integer unused) -> client.getBackupSnapshot(finalDate, finalDimension, current);
             info = dateString + "時点の状態";
         } else if (args.length == 1) {
             String version = args[0];
             final SnapshotServerClient client = new SnapshotServerClient(snapshotServerHost, snapshotServerPort);
-            snapshot = client.getWildSnapshot(version, dimension, current);
+            final String finalVersion = version;
+            snapshotGetter = (Integer unused) -> client.getWildSnapshot(finalVersion, finalDimension, current);
             info = "バージョン" + version + "の初期状態";
         } else {
             player.sendMessage(ChatColor.RED + "コマンドの引数が不正です。/gregenerate <バージョン> または /gregenerate <yyyy-MM-dd hh:mm> として下さい");
             return false;
         }
-        ReplaceOperation operation = new ReplaceOperation(world);
-        final String error = snapshot.getErrorMessage();
-        if (error != null) {
-            player.sendMessage(ChatColor.RED + error);
-            return true;
-        }
+        player.sendMessage(ChatColor.GRAY + "指定した範囲のブロック情報を取得しています...");
         final Server server = owner.getServer();
+        final String finalInfo = info;
+        final Function<Integer, Snapshot> finalSnapshotGetter = snapshotGetter;
+        server.getScheduler().runTaskAsynchronously(owner, () -> {
+            final Snapshot snapshot = finalSnapshotGetter.apply(0);
+            server.getScheduler().runTask(owner, () -> {
+                ReplaceOperation operation = new ReplaceOperation(world);
+                final String error = snapshot.getErrorMessage();
+                if (error != null) {
+                    player.sendMessage(ChatColor.RED + error);
+                    return;
+                }
 
-        final Snapshot s = snapshot;
-        final boolean ok = current.forEach(loc -> {
-            BlockData bd = s.blockAt(loc, server);
-            if (bd == null) {
-                player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
-                return false;
-            }
-            Block block = world.getBlockAt(loc.x, loc.y, loc.z);
-            String opBlock = null;
-            if (!block.getBlockData().matches(bd)) {
-                opBlock = bd.getAsString();
-            }
-            String opBiome = null;
-            String biome = s.biomeAt(loc);
-            if (biome != null) {
-                Biome beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
-                Biome afterBiome = BiomeHelper.Resolve(biome, owner.getServer());
-                if (afterBiome != null && beforeBiome != afterBiome) {
-                    opBiome = biome;
+                final Snapshot s = snapshot;
+                final boolean ok = current.forEach(loc -> {
+                    BlockData bd = s.blockAt(loc, server);
+                    if (bd == null) {
+                        player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
+                        return false;
+                    }
+                    Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+                    String opBlock = null;
+                    if (!block.getBlockData().matches(bd)) {
+                        opBlock = bd.getAsString();
+                    }
+                    String opBiome = null;
+                    String biome = s.biomeAt(loc);
+                    if (biome != null) {
+                        Biome beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
+                        Biome afterBiome = BiomeHelper.Resolve(biome, owner.getServer());
+                        if (afterBiome != null && beforeBiome != afterBiome) {
+                            opBiome = biome;
+                        }
+                    }
+                    if (opBlock != null || opBiome != null) {
+                        if (opBlock == null) {
+                            opBlock = block.getBlockData().getAsString(true);
+                        }
+                        operation.register(loc, new ReplaceData(opBlock, opBiome));
+                    }
+                    return true;
+                });
+                if (ok) {
+                    ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
+                    undoOperationRegistry.push(player, undo);
+                    player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + finalInfo + "に戻しました");
+                } else {
+                    player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
                 }
-            }
-            if (opBlock != null || opBiome != null) {
-                if (opBlock == null) {
-                    opBlock = block.getBlockData().getAsString(true);
-                }
-                operation.register(loc, new ReplaceData(opBlock, opBiome));
-            }
-            return true;
+            });
         });
-        if (ok) {
-            ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
-            undoOperationRegistry.push(player, undo);
-            player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + info + "に戻しました");
-        } else {
-            player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
-        }
         return true;
     }
 
