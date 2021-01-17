@@ -228,7 +228,7 @@ public class TeleportCommand {
             }
             if (arg.length() == 0) {
                 availableLandmarks.add(landmark);
-            } else if (yomi.startsWith(arg)) {
+            } else if (yomi.startsWith(arg.toLowerCase()) || landmark.name.toLowerCase().startsWith(arg.toLowerCase())) {
                 availableLandmarks.add(landmark);
             }
         });
