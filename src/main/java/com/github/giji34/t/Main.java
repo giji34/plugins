@@ -82,6 +82,10 @@ public class Main extends JavaPlugin implements Listener {
         if (guide != null) {
             guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand,1));
         }
+        PluginCommand connect = getCommand("connect");
+        if (connect != null) {
+            connect.setTabCompleter(new StringListTabCompleter(new String[]{"2434_main", "2434_world06", "hololive_01", "en_hololive"}));
+        }
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -447,10 +451,15 @@ public class Main extends JavaPlugin implements Listener {
 
     private boolean handleConnectCommand(Player player, String[] args) {
         if (args.length != 1) {
-            player.sendMessage(ChatColor.RED + "接続先を指定してください. (例) /connect main");
+            player.sendMessage(ChatColor.RED + "接続先を指定してください. (例) /connect 2434_main");
             return false;
         }
         String destination = args[0];
+        if (destination.equals("2434_main")) {
+            destination = "main";
+        } else if (destination.equals("2434_world06")) {
+            destination = "world06";
+        }
         try {
             this.connect(player, destination);
         } catch (Exception e) {
