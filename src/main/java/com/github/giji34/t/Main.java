@@ -139,6 +139,8 @@ public class Main extends JavaPlugin implements Listener {
                 return true;
             case "connect":
                 return this.handleConnectCommand(player, args);
+            case "kusa":
+                return editCommand.kusa(player);
             default:
                 return false;
         }

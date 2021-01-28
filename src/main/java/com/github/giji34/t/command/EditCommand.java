@@ -574,4 +574,34 @@ public class EditCommand {
         ZoneOffset zoneOffset = ZoneId.systemDefault().getRules().getOffset(Instant.now());;
         return OffsetDateTime.of(year, month, day, hour, minute,0, 0, zoneOffset);
     }
+
+    public boolean kusa(final Player player) {
+        BlockRange current = this.selectedBlockRangeRegistry.current(player);
+        if (current == null) {
+            player.sendMessage(ChatColor.RED + "まだ選択範囲が設定されていません");
+            return false;
+        }
+        final Server server = player.getServer();
+        final World world = player.getWorld();
+        final ReplaceOperation operation = new ReplaceOperation(world);
+        final String grassBlock = server.createBlockData(Material.GRASS_BLOCK).getAsString();
+        current.forEach((Loc loc) -> {
+            Block block = world.getBlockAt(loc.x, loc.y, loc.z);
+            if (block.getType() != Material.DIRT) {
+                return true;
+            }
+            Block upper = world.getBlockAt(loc.x, loc.y + 1, loc.z);
+            if (upper.getType() != Material.AIR && upper.getType() != Material.CAVE_AIR) {
+                return true;
+            }
+            operation.register(loc, new ReplaceData(grassBlock, null));
+            return true;
+        });
+        if (operation.count() == 0) {
+            return true;
+        }
+        ReplaceOperation undo = operation.apply(server, world, true);
+        undoOperationRegistry.push(player, undo);
+        return true;
+    }
 }
