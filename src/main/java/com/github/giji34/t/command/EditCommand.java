@@ -591,7 +591,7 @@ public class EditCommand {
                 return true;
             }
             Block upper = world.getBlockAt(loc.x, loc.y + 1, loc.z);
-            if (upper.getType() != Material.AIR && upper.getType() != Material.CAVE_AIR) {
+            if (!upper.getType().isTransparent()) {
                 return true;
             }
             operation.register(loc, new ReplaceData(grassBlock, null));
