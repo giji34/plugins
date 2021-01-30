@@ -585,6 +585,7 @@ public class EditCommand {
         final World world = player.getWorld();
         final ReplaceOperation operation = new ReplaceOperation(world);
         final String grassBlock = server.createBlockData(Material.GRASS_BLOCK).getAsString();
+        final String snowyGrassBlock = server.createBlockData(Material.GRASS_BLOCK, "[snowy=true]").getAsString();
         current.forEach((Loc loc) -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
             if (block.getType() != Material.DIRT) {
@@ -594,7 +595,11 @@ public class EditCommand {
             if (!upper.getType().isTransparent()) {
                 return true;
             }
-            operation.register(loc, new ReplaceData(grassBlock, null));
+            if (upper.getType() == Material.SNOW) {
+                operation.register(loc, new ReplaceData(snowyGrassBlock, null));
+            } else {
+                operation.register(loc, new ReplaceData(grassBlock, null));
+            }
             return true;
         });
         if (operation.count() == 0) {
