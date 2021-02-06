@@ -367,8 +367,6 @@ public class Main extends JavaPlugin implements Listener {
                 AtomicBoolean hasDiamondSword = new AtomicBoolean(false);
                 AtomicBoolean hasMinecart = new AtomicBoolean(false);
                 AtomicBoolean hasBoat = new AtomicBoolean(false);
-                AtomicBoolean hasElytra = new AtomicBoolean(false);
-                AtomicInteger numFireworkRocket = new AtomicInteger(0);
                 player.getInventory().forEach((itemStack -> {
                     if (itemStack == null) return;
                     Material material = itemStack.getType();
@@ -379,11 +377,6 @@ public class Main extends JavaPlugin implements Listener {
                         hasBoat.set(true);
                     } else if (material == Material.MINECART) {
                         hasMinecart.set(true);
-                    } else if (material == Material.ELYTRA) {
-                        Repair(itemStack);
-                        hasElytra.set(true);
-                    } else if (material == Material.FIREWORK_ROCKET) {
-                        numFireworkRocket.addAndGet(itemStack.getAmount());
                     }
                 }));
                 if (!hasDiamondSword.get()) {
@@ -394,13 +387,6 @@ public class Main extends JavaPlugin implements Listener {
                 }
                 if (!hasMinecart.get()) {
                     player.getInventory().addItem(new ItemStack(Material.MINECART));
-                }
-                if (!hasElytra.get()) {
-                    player.getInventory().addItem(new ItemStack(Material.ELYTRA));
-                }
-                if (numFireworkRocket.get() < 128) {
-                    int num = 128 - numFireworkRocket.get();
-                    player.getInventory().addItem(new ItemStack(Material.FIREWORK_ROCKET, num));
                 }
             }, 40);
         }

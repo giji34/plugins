@@ -1,4 +1,4 @@
-VERSION := 0.7.1
+VERSION := 0.8.0
 
 build/libs/giji34-$(VERSION).jar: build.gradle $(shell find ./src/main -type f -print)
 	./gradlew assemble
