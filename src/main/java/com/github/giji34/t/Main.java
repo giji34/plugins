@@ -248,19 +248,6 @@ public class Main extends JavaPlugin implements Listener {
                 }
                 return true;
             }
-            case RIGHT_CLICK_AIR:
-                if (!e.hasItem()) {
-                    return true;
-                }
-                ItemStack itemStack = e.getItem();
-                if (itemStack != null && itemStack.getType() == Material.FIREWORK_ROCKET) {
-                    ItemStack maybeElytra = player.getInventory().getChestplate();
-                    if (maybeElytra != null && maybeElytra.getType() == Material.ELYTRA) {
-                        Repair(maybeElytra);
-                    }
-                    return false;
-                }
-                return true;
             default:
                 return true;
         }
