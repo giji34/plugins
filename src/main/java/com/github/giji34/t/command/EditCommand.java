@@ -609,4 +609,25 @@ public class EditCommand {
         undoOperationRegistry.push(player, undo);
         return true;
     }
+
+    public void tallSeaGrass(Player player, Loc loc) {
+        final World world = player.getWorld();
+        Block lower = world.getBlockAt(loc.x, loc.y + 1, loc.z);
+        Block upper = world.getBlockAt(loc.x, loc.y + 2, loc.z);
+        final Server server = player.getServer();
+        BlockData water = server.createBlockData(Material.WATER, "[falling=false]");
+        if (!lower.getBlockData().matches(water)) {
+            return;
+        }
+        if (!upper.getBlockData().matches(water)) {
+            return;
+        }
+        ReplaceOperation operation = new ReplaceOperation(world);
+        String tallSeaGrassUpper = server.createBlockData(Material.TALL_SEAGRASS, "[half=upper]").getAsString();
+        String tallSeaGrassLower = server.createBlockData(Material.TALL_SEAGRASS, "[half=lower]").getAsString();
+        operation.register(new Loc(loc.x, loc.y + 1, loc.z), new ReplaceData(tallSeaGrassLower, null));
+        operation.register(new Loc(loc.x, loc.y + 2, loc.z), new ReplaceData(tallSeaGrassUpper, null));
+        ReplaceOperation undo = operation.apply(server, world, true);
+        undoOperationRegistry.push(player, undo);
+    }
 }

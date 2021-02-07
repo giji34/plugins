@@ -165,27 +165,43 @@ public class Main extends JavaPlugin implements Listener {
             if (tool == null) {
                 return;
             }
-            if (tool.getType() != Material.WOODEN_AXE) {
-                return;
+            Material toolType = tool.getType();
+            if (toolType == Material.WOODEN_AXE) {
+                Block block = e.getClickedBlock();
+                if (block == null) {
+                    return;
+                }
+                EquipmentSlot hand = e.getHand();
+                if (hand != EquipmentSlot.HAND) {
+                    return;
+                }
+                Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+                Action action = e.getAction();
+                if (action == Action.LEFT_CLICK_BLOCK) {
+                    editCommand.setSelectionStartBlock(player, loc);
+                } else if (action == Action.RIGHT_CLICK_BLOCK) {
+                    editCommand.setSelectionEndBlock(player, loc);
+                } else {
+                    return;
+                }
+                e.setCancelled(true);
+            } else if (toolType == Material.WOODEN_HOE) {
+                Block block = e.getClickedBlock();
+                if (block == null) {
+                    return;
+                }
+                EquipmentSlot hand = e.getHand();
+                if (hand != EquipmentSlot.HAND) {
+                    return;
+                }
+                Action action = e.getAction();
+                if (action != Action.LEFT_CLICK_BLOCK) {
+                    return;
+                }
+                Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+                editCommand.tallSeaGrass(player, loc);
+                e.setCancelled(true);
             }
-            Block block = e.getClickedBlock();
-            if (block == null) {
-                return;
-            }
-            EquipmentSlot hand = e.getHand();
-            if (hand != EquipmentSlot.HAND) {
-                return;
-            }
-            Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-            Action action = e.getAction();
-            if (action == Action.LEFT_CLICK_BLOCK) {
-                editCommand.setSelectionStartBlock(player, loc);
-            } else if (action == Action.RIGHT_CLICK_BLOCK) {
-                editCommand.setSelectionEndBlock(player, loc);
-            } else {
-                return;
-            }
-            e.setCancelled(true);
         } else {
             if (this.shouldRejectInteraction(e)) {
                 e.setCancelled(true);
