@@ -615,11 +615,10 @@ public class EditCommand {
         Block lower = world.getBlockAt(loc.x, loc.y + 1, loc.z);
         Block upper = world.getBlockAt(loc.x, loc.y + 2, loc.z);
         final Server server = player.getServer();
-        BlockData water = server.createBlockData(Material.WATER, "[falling=false]");
-        if (!lower.getBlockData().matches(water)) {
+        if (lower.getType() != Material.WATER) {
             return;
         }
-        if (!upper.getBlockData().matches(water)) {
+        if (upper.getType() != Material.WATER) {
             return;
         }
         ReplaceOperation operation = new ReplaceOperation(world);
