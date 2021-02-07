@@ -610,23 +610,25 @@ public class EditCommand {
         return true;
     }
 
-    public void tallSeaGrass(Player player, Loc loc) {
+    public static boolean TallSeaGrass(Player player, Loc loc) {
         final World world = player.getWorld();
+        Block target = world.getBlockAt(loc.x, loc.y, loc.z);
+        if (target.getType() == Material.SEAGRASS || target.getType() == Material.TALL_SEAGRASS) {
+            return false;
+        }
         Block lower = world.getBlockAt(loc.x, loc.y + 1, loc.z);
         Block upper = world.getBlockAt(loc.x, loc.y + 2, loc.z);
         final Server server = player.getServer();
         if (lower.getType() != Material.WATER) {
-            return;
+            return false;
         }
         if (upper.getType() != Material.WATER) {
-            return;
+            return false;
         }
-        ReplaceOperation operation = new ReplaceOperation(world);
-        String tallSeaGrassUpper = server.createBlockData(Material.TALL_SEAGRASS, "[half=upper]").getAsString();
-        String tallSeaGrassLower = server.createBlockData(Material.TALL_SEAGRASS, "[half=lower]").getAsString();
-        operation.register(new Loc(loc.x, loc.y + 1, loc.z), new ReplaceData(tallSeaGrassLower, null));
-        operation.register(new Loc(loc.x, loc.y + 2, loc.z), new ReplaceData(tallSeaGrassUpper, null));
-        ReplaceOperation undo = operation.apply(server, world, true);
-        undoOperationRegistry.push(player, undo);
+        BlockData tallSeaGrassUpper = server.createBlockData(Material.TALL_SEAGRASS, "[half=upper]");
+        BlockData tallSeaGrassLower = server.createBlockData(Material.TALL_SEAGRASS, "[half=lower]");
+        lower.setBlockData(tallSeaGrassLower, false);
+        upper.setBlockData(tallSeaGrassUpper, true);
+        return true;
     }
 }

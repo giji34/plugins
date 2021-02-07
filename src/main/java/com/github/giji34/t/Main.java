@@ -185,7 +185,7 @@ public class Main extends JavaPlugin implements Listener {
                     return;
                 }
                 e.setCancelled(true);
-            } else if (toolType == Material.WOODEN_HOE) {
+            } else if (toolType == Material.SEAGRASS) {
                 Block block = e.getClickedBlock();
                 if (block == null) {
                     return;
@@ -199,8 +199,9 @@ public class Main extends JavaPlugin implements Listener {
                     return;
                 }
                 Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-                editCommand.tallSeaGrass(player, loc);
-                e.setCancelled(true);
+                if (EditCommand.TallSeaGrass(player, loc)) {
+                    e.setCancelled(true);
+                }
             }
         } else {
             if (this.shouldRejectInteraction(e)) {
