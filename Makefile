@@ -3,7 +3,7 @@ build/libs/giji34-*.jar: build.gradle $(shell find ./src/main -type f -print)
 	touch $@
 
 .PHONY: deploy
-deploy: build/libs/giji34-*.jar
+deploy: clean build/libs/giji34-*.jar
 	scp $^ main.giji34:jar/giji34/
 
 .PHONY: clean
