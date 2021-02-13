@@ -254,9 +254,6 @@ public class Main extends JavaPlugin implements Listener {
                         }
                         return true;
                 }
-                if (MaterialHelper.isStorage(material)) {
-                    return true;
-                }
                 if (MaterialHelper.isBoat(e.getMaterial()) && e.getHand() == EquipmentSlot.HAND) {
                     return false;
                 }
@@ -509,26 +506,6 @@ class MaterialHelper {
             case JUNGLE_BOAT:
             case ACACIA_BOAT:
             case DARK_OAK_BOAT:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    static boolean isStorage(Material m) {
-        switch (m) {
-            case CHEST:
-            case CHEST_MINECART:
-            //case TRAPPED_CHEST: NOTE: 本家サーバーでトラップ建築の素材に使われることがある. 再現したものを稼働させる目的でこれだけは許可する.
-            case HOPPER:
-            case HOPPER_MINECART:
-            case FURNACE:
-            case FURNACE_MINECART:
-            case BARREL:
-            case DROPPER:
-            case DISPENSER:
-            case ENDER_CHEST:
-            case SHULKER_BOX:
                 return true;
             default:
                 return false;
