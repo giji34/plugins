@@ -27,8 +27,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -451,7 +449,7 @@ public class Main extends JavaPlugin implements Listener {
             destination = "world06";
         }
         try {
-            this.connect(player, destination);
+            InterServerPortal.Connect(player, destination, this);
         } catch (Exception e) {
             player.sendMessage(ChatColor.RED + destination + " に接続できませんでした");
             getLogger().warning(player.getName() + " failed connecting server " + destination);
@@ -459,16 +457,6 @@ public class Main extends JavaPlugin implements Listener {
         }
         player.sendMessage(destination + " に接続しています...");
         return true;
-    }
-
-    private void connect(Player player, String destination) throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
-        dos.writeUTF("Connect");
-        dos.writeUTF(destination);
-        player.sendPluginMessage(this, "BungeeCord", baos.toByteArray());
-        baos.close();
-        dos.close();
     }
 
     @EventHandler
