@@ -451,11 +451,11 @@ public class Main extends JavaPlugin implements Listener {
         try {
             InterServerPortal.Connect(player, destination, this);
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + destination + " に接続できませんでした");
+            player.sendMessage(ChatColor.RED + args[0] + " に接続できませんでした");
             getLogger().warning(player.getName() + " failed connecting server " + destination);
             return false;
         }
-        player.sendMessage(destination + " に接続しています...");
+        player.sendMessage(args[0] + " に接続しています...");
         return true;
     }
 
