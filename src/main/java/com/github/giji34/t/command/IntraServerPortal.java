@@ -1,11 +1,13 @@
 package com.github.giji34.t.command;
 
 import com.github.giji34.t.Loc;
+import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.Nullable;
 
+import java.io.BufferedWriter;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,10 +15,9 @@ public class IntraServerPortal extends Portal {
     public final double x;
     public final double y;
     public final double z;
-    @Nullable
-    public final Float yaw;
+    public final float yaw;
 
-    IntraServerPortal(String name, UUID worldUuid, List<Loc> blocks, double x, double y, double z, @Nullable Float yaw) {
+    IntraServerPortal(String name, UUID worldUuid, List<Loc> blocks, double x, double y, double z, float yaw) {
         super(name, worldUuid, blocks);
         this.x = x;
         this.y = y;
@@ -50,12 +51,40 @@ public class IntraServerPortal extends Portal {
         if (yawObj instanceof Number) {
             this.yaw = ((Number) yawObj).floatValue();
         } else {
-            this.yaw = null;
+            this.yaw = 0;
         }
     }
 
     @Override
     public void apply(Player player, JavaPlugin source) {
-        //TODO:
+        Location location = player.getLocation();
+        UUID uuid = player.getWorld().getUID();
+        if (!uuid.equals(this.worldUuid)) {
+            return;
+        }
+        location.setX(this.x);
+        location.setY(this.y);
+        location.setZ(this.z);
+        location.setYaw(this.yaw);
+        player.teleport(location, PlayerTeleportEvent.TeleportCause.PLUGIN);
+    }
+
+    @Override
+    public void save(BufferedWriter br) throws Exception {
+        super.save(br);
+        br.write("  type: \"intra\"");
+        br.newLine();
+        br.write("  data:");
+        br.newLine();
+        br.write("    destination:");
+        br.newLine();
+        br.write("      x: " + this.x);
+        br.newLine();
+        br.write("      y: " + this.y);
+        br.newLine();
+        br.write("      z: " + this.z);
+        br.newLine();
+        br.write("      yaw: " + this.yaw);
+        br.newLine();
     }
 }

@@ -79,7 +79,6 @@ public abstract class Portal {
             br.write("      z: " + loc.z);
             br.newLine();
         }
-        br.newLine();
     }
 
     public boolean register(HashMap<UUID, HashMap<Loc, Portal>> storage, Player logger) {

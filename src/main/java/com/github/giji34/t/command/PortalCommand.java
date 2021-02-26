@@ -111,6 +111,7 @@ public class PortalCommand {
         try {
             this.saveConfig();
         } catch (Exception e) {
+            owner.getLogger().warning(e.getMessage());
             player.sendMessage(ChatColor.RED + "設定ファイル portals.yml の書き込みに失敗しました");
             return true;
         }
@@ -118,8 +119,65 @@ public class PortalCommand {
         return true;
     }
 
+    // /create_intra_server_portal <name> <destX> <destY> <destZ> <yaw>
     public boolean createIntraServerPortal(Player player, String[] args, EditCommand editCommand) {
-        return false;
+        BlockRange selection = editCommand.getCurrentSelection(player);
+        if (selection == null) {
+            player.sendMessage(ChatColor.RED + "ポータルにする範囲を木の斧で選択して下さい");
+            return true;
+        }
+        if (args.length != 5) {
+            return false;
+        }
+        String name = args[0];
+        String xStr = args[1];
+        String yStr = args[2];
+        String zStr = args[3];
+        String yawStr = args[4];
+        double x, y, z;
+        try {
+            x = Double.parseDouble(xStr);
+            y = Double.parseDouble(yStr);
+            z = Double.parseDouble(zStr);
+        } catch (Exception e) {
+            player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
+            return true;
+        }
+        try {
+            Integer.parseInt(xStr);
+            x += 0.5;
+        } catch (Exception e) {}
+        try {
+            Integer.parseInt(zStr);
+            z += 0.5;
+        } catch (Exception e) {}
+        float yaw;
+        try {
+            yaw = Float.parseFloat(yawStr);
+        } catch (Exception e) {
+            player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
+            return true;
+        }
+        UUID worldUUID = player.getWorld().getUID();
+        final ArrayList<Loc> blocks = new ArrayList<>();
+        selection.forEach((Loc loc) -> {
+            blocks.add(loc);
+            return true;
+        });
+        final IntraServerPortal portal = new IntraServerPortal(name, worldUUID, blocks, x, y, z, yaw);
+        if (!portal.register(storage, player)) {
+            return true;
+        }
+        try {
+            this.saveConfig();
+        } catch (Exception e) {
+            e.printStackTrace();
+            owner.getLogger().warning(e.getMessage());
+            player.sendMessage(ChatColor.RED + "設定ファイル portals.yml の書き込みに失敗しました");
+            return true;
+        }
+        player.sendMessage("ポータル \"" + name + "\" を設置しました");
+        return true;
     }
 
     public boolean delete(Player player, String[] args) {
@@ -150,6 +208,7 @@ public class PortalCommand {
         try {
             saveConfig();
         } catch (Exception e) {
+            owner.getLogger().warning(e.getMessage());
             player.sendMessage(ChatColor.RED + "設定ファイル portals.yml の書き込みに失敗しました");
             return true;
         }
@@ -330,7 +389,6 @@ public class PortalCommand {
                 }
                 for (String name : names.keySet()) {
                     Portal portal = names.get(name);
-                    System.out.println("saveConfig; name=" + name + "; portal=" + portal);
                     portal.save(br);
                 }
             }
