@@ -90,6 +90,7 @@ public class InterServerPortal extends Portal {
             br.newLine();
         }
         br.write("    destination: \"" + this.destination + "\"");
+        br.newLine();
     }
 
     @Override

@@ -14,6 +14,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -398,8 +400,7 @@ public class PortalCommand {
         }
 
         File configFile = getConfigFile();
-        configFile.delete();
-        tmp.renameTo(configFile);
+        Files.move(tmp.toPath(), configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
     }
 
     private void loadUserStatus() {
