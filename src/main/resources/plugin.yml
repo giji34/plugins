@@ -19,8 +19,10 @@ commands:
     usage: guide <Player> <Name of Landmark>
   follow:
     usage: follow <Player>
-  create_portal:
-    usage: create_portal <name> <destinationSserver> <returnX> <returnY> <returnZ>
+  create_inter_server_portal:
+    usage: create_inter_server_portal <name> <destinationSserver> <returnX> <returnY> <returnZ> <yaw>
+  create_intra_server_portal:
+    usage: create_intra_server_portal <name> <destX> <destY> <destZ> <yaw>
   delete_portal:
     usage: delete_portal <name>
   fell_trees:

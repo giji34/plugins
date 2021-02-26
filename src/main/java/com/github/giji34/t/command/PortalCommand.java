@@ -14,7 +14,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.UUID;
 
 class PortalCooldown {
     static final long kCooldownMilliSeconds = 5000;
@@ -29,7 +32,7 @@ class PortalCooldown {
 }
 
 public class PortalCommand {
-    final HashMap<UUID, HashMap<Loc, Portal>> storege = new HashMap<>();
+    final HashMap<UUID, HashMap<Loc, Portal>> storage = new HashMap<>();
     final JavaPlugin owner;
     File pluginDirectory;
 
@@ -51,7 +54,7 @@ public class PortalCommand {
         return new File(pluginDirectory, "user_status.yml");
     }
 
-    public boolean create(Player player, String[] args, EditCommand editCommand) {
+    public boolean createInterServerPortal(Player player, String[] args, EditCommand editCommand) {
         BlockRange selection = editCommand.getCurrentSelection(player);
         if (selection == null) {
             player.sendMessage(ChatColor.RED + "ポータルにする範囲を木の斧で選択して下さい");
@@ -96,28 +99,15 @@ public class PortalCommand {
             returnLoc = new Location(null, x, y, z, yaw, 0);
         }
         UUID worldUUID = player.getWorld().getUID();
-        if (storege.containsKey(worldUUID)) {
-            HashMap<Loc, Portal> portals = storege.get(worldUUID);
-            for (Loc loc : portals.keySet()) {
-                Portal portal = portals.get(loc);
-                if (portal.name.equals(name)) {
-                    player.sendMessage(ChatColor.RED + "すでに \"" + name + "\" という名前のポータルが設置済みです. delete_portal " + name + " で削除してから設置しなおして下さい");
-                    return true;
-                }
-                if (selection.contains(loc.x, loc.y, loc.z)) {
-                    player.sendMessage(ChatColor.RED + "(" + loc.x + ", " + loc.y + ", " + loc.z + ") には既に \"" + portal.name + "\" という名前のポータルが設置済みです");
-                    return true;
-                }
-            }
-        } else {
-            storege.put(worldUUID, new HashMap<>());
-        }
-        final HashMap<Loc, Portal> target = storege.get(worldUUID);
-        final Portal portal = new Portal(name, returnLoc, destination);
+        final ArrayList<Loc> blocks = new ArrayList<>();
         selection.forEach((Loc loc) -> {
-            target.put(loc, portal);
-            return Boolean.TRUE;
+            blocks.add(loc);
+            return true;
         });
+        final InterServerPortal portal = new InterServerPortal(name, worldUUID, blocks, returnLoc, destination);
+        if (!portal.register(storage, player)) {
+            return true;
+        }
         try {
             this.saveConfig();
         } catch (Exception e) {
@@ -128,6 +118,10 @@ public class PortalCommand {
         return true;
     }
 
+    public boolean createIntraServerPortal(Player player, String[] args, EditCommand editCommand) {
+        return false;
+    }
+
     public boolean delete(Player player, String[] args) {
         if (args.length != 1) {
             player.sendMessage(ChatColor.RED + "削除するポータルの名前を指定して下さい");
@@ -135,11 +129,11 @@ public class PortalCommand {
         }
         String name = args[0];
         UUID worldUUID = player.getWorld().getUID();
-        if (!storege.containsKey(worldUUID)) {
+        if (!storage.containsKey(worldUUID)) {
             player.sendMessage(ChatColor.RED + "現在居るワールドには \"" + name + "\" という名前のポータルはありません");
             return true;
         }
-        HashMap<Loc, Portal> portals = storege.get(worldUUID);
+        HashMap<Loc, Portal> portals = storage.get(worldUUID);
         int cnt = 0;
         for (Iterator<Loc> it = portals.keySet().iterator(); it.hasNext(); ) {
             Loc loc = it.next();
@@ -166,7 +160,7 @@ public class PortalCommand {
     @Nullable
     public Portal findPortal(Player player) {
         UUID worldUUID = player.getWorld().getUID();
-        HashMap<Loc, Portal> portals = storege.get(worldUUID);
+        HashMap<Loc, Portal> portals = storage.get(worldUUID);
         if (portals == null) {
             return null;
         }
@@ -260,7 +254,24 @@ public class PortalCommand {
     private void loadConfig() {
         /*
         portal1:
-          destination: "server_name"
+          type: "inter"
+          blocks:
+            - x: 1
+              y: 2
+              z: 3
+            - x: 1
+              y: 2
+              z: 4
+          world_uuid: "001E1288-969F-4239-80F3-559384597246"
+          data:
+            destination: "server_name"
+            return_loc:
+              x: 5.5
+              y: 6
+              z: 7.5
+              yaw: 180.0
+        portal2:
+          type: "intra"
           world_uuid: "001E1288-969F-4239-80F3-559384597246"
           blocks:
             - x: 1
@@ -269,11 +280,12 @@ public class PortalCommand {
             - x: 1
               y: 2
               z: 4
-          return_loc:
-            x: 5.5
-            y: 6
-            z: 7.5
-            yaw: 180.0
+          data:
+            destination:
+              x: 1
+              y: 2
+              z: 3
+              yaw: 0.0
         */
         File configFile = getConfigFile();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
@@ -284,82 +296,22 @@ public class PortalCommand {
             }
             ConfigurationSection section = (ConfigurationSection) sectionObj;
 
-            Object destinationObj = section.get("destination");
-            if (!(destinationObj instanceof String)) {
+            Portal portal;
+            try {
+                portal = Portal.Load(name, section);
+            } catch (Exception e) {
+                owner.getLogger().warning("Cannot parse portal data with name \"" + name + "\"");
+                owner.getLogger().warning(e.getMessage());
                 continue;
             }
-            String destination = (String) destinationObj;
 
-            Object blocksObj = section.get("blocks");
-            if (!(blocksObj instanceof ArrayList)) {
-                continue;
+            if (!storage.containsKey(portal.worldUuid)) {
+                storage.put(portal.worldUuid, new HashMap<>());
             }
-            ArrayList<Loc> blocks = new ArrayList<>();
-            Integer minX = null;
-            Integer maxX = null;
-            Integer minY = null;
-            Integer maxY = null;
-            Integer minZ = null;
-            Integer maxZ = null;
-            for (Object locObj : (ArrayList) blocksObj) {
-                if (!(locObj instanceof HashMap)) {
-                    continue;
-                }
-                HashMap<String, Integer> loc = (HashMap) locObj;
-                int x = loc.get("x");
-                int y = loc.get("y");
-                int z = loc.get("z");
-                minX = minX == null ? x : Math.min(minX, x);
-                maxX = maxX == null ? x : Math.max(maxX, x);
-                minY = minY == null ? y : Math.min(minY, y);
-                maxY = maxY == null ? y : Math.max(maxY, y);
-                minZ = minZ == null ? z : Math.min(minZ, z);
-                maxZ = maxZ == null ? z : Math.max(maxZ, z);
-                blocks.add(new Loc(x, y, z));
-            }
-
-            Location returnLoc = null;
-            Object returnLocObj = section.get("return_loc");
-            if (returnLocObj instanceof ConfigurationSection) {
-                ConfigurationSection returnLocSection = (ConfigurationSection) returnLocObj;
-                Object xObj = returnLocSection.get("x");
-                Object yObj = returnLocSection.get("y");
-                Object zObj = returnLocSection.get("z");
-                Object yawObj = returnLocSection.get("yaw");
-                if (!(xObj instanceof Number) || !(yObj instanceof Number) || !(zObj instanceof  Number)) {
-                    continue;
-                }
-                double x = ((Number)xObj).doubleValue();
-                double y = ((Number)yObj).doubleValue();
-                double z = ((Number)zObj).doubleValue();
-                if (xObj instanceof Integer) {
-                    x += 0.5;
-                }
-                if (zObj instanceof Integer) {
-                    z += 0.5;
-                }
-                float yaw = 0;
-                if (yawObj instanceof Number) {
-                    yaw = ((Number)yawObj).floatValue();
-                }
-                returnLoc = new Location(null, x, y, z, yaw, 0);
-            }
-
-            Object worldUUIDObj = section.get("world_uuid");
-            if (!(worldUUIDObj instanceof String)) {
-                continue;
-            }
-            String worldUUIDString = (String)worldUUIDObj;
-            UUID worldUUID = UUID.fromString(worldUUIDString);
-            if (!storege.containsKey(worldUUID)) {
-                storege.put(worldUUID, new HashMap<>());
-            }
-            Portal portal = new Portal(name, returnLoc, destination);
-            HashMap<Loc, Portal> target = storege.get(worldUUID);
-            for (Loc block : blocks) {
+            HashMap<Loc, Portal> target = storage.get(portal.worldUuid);
+            for (Loc block : portal.blocks) {
                 target.put(block, portal);
             }
-            owner.getLogger().info("loadConfig: name=" + name + "; blocks=[" + minX + ", " + minY + ", " + minZ + "]-[" + maxX + ", " + maxY + ", " + maxZ + "]; return_loc=" + (returnLoc == null ? "null" : returnLoc.toString()) + "; world_uuid=" + worldUUIDString);
         }
     }
 
@@ -368,47 +320,15 @@ public class PortalCommand {
         FileOutputStream fos = new FileOutputStream(configFile);
         OutputStreamWriter osw_ = new OutputStreamWriter(fos);
         final BufferedWriter br = new BufferedWriter(osw_);
-        for (UUID worldUUID : storege.keySet()) {
-            HashMap<Loc, Portal> portals = storege.get(worldUUID);
-            HashSet<String> names = new HashSet<>();
+        for (UUID worldUUID : storage.keySet()) {
+            HashMap<Loc, Portal> portals = storage.get(worldUUID);
+            HashMap<String, Portal> names = new HashMap<>();
             for (Portal portal : portals.values()) {
-                names.add(portal.name);
+                names.put(portal.name, portal);
             }
-            for (String name : names) {
-                br.write(name + ":");
-                br.newLine();
-                br.write("  world_uuid: \"" + worldUUID.toString() + "\"");
-                br.newLine();
-                br.write("  blocks:");
-                br.newLine();
-                Portal p = null;
-                for (Loc loc : portals.keySet()) {
-                    Portal portal = portals.get(loc);
-                    if (!portal.name.equals(name)) {
-                        continue;
-                    }
-                    p = portal;
-                    br.write("    - x: " + loc.x);
-                    br.newLine();
-                    br.write("      y: " + loc.y);
-                    br.newLine();
-                    br.write("      z: " + loc.z);
-                    br.newLine();
-                }
-                if (p.returnLoc != null) {
-                    br.write("  return_loc:");
-                    br.newLine();
-                    br.write("    x: " + p.returnLoc .getX());
-                    br.newLine();
-                    br.write("    y: " + p.returnLoc.getY());
-                    br.newLine();
-                    br.write("    z: " + p.returnLoc.getZ());
-                    br.newLine();
-                    br.write("    yaw: " + p.returnLoc.getYaw());
-                    br.newLine();
-                }
-                br.write("  destination: \"" + p.destination + "\"");
-                br.newLine();
+            for (String name : names.keySet()) {
+                Portal portal = portals.get(name);
+                portal.save(br);
             }
         }
         br.close();

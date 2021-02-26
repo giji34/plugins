@@ -32,7 +32,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -125,8 +124,10 @@ public class Main extends JavaPlugin implements Listener {
                 return teleportCommand.guide(player, args);
             case "follow":
                 return teleportCommand.follow(player, args);
-            case "create_portal":
-                return portalCommand.create(player, args, editCommand);
+            case "create_inter_server_portal":
+                return portalCommand.createInterServerPortal(player, args, editCommand);
+            case "create_intra_server_portal":
+                return portalCommand.createIntraServerPortal(player, args, editCommand);
             case "delete_portal":
                 return portalCommand.delete(player, args);
             case "fell_trees":
@@ -336,11 +337,7 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         portalCommand.markPortalUsed(player, portal);
-        try {
-            this.connect(player, portal.destination);
-        } catch (Exception e) {
-            getLogger().warning("onPlayerMove; io error: e=" + e);
-        }
+        portal.apply(player, this);
     }
 
     @EventHandler
@@ -428,13 +425,17 @@ public class Main extends JavaPlugin implements Listener {
         Portal portal = portalCommand.getCoolingdownPortal(player);
         if (portal == null) {
             portalCommand.setPortalReturnLocation(player, null);
-        } else if (portal.returnLoc != null) {
-            Location loc = player.getLocation();
-            loc.setX(portal.returnLoc.getX());
-            loc.setY(portal.returnLoc.getY());
-            loc.setZ(portal.returnLoc.getZ());
-            loc.setYaw(portal.returnLoc.getYaw());
-            portalCommand.setPortalReturnLocation(player, loc);
+        } else if (portal instanceof InterServerPortal) {
+            InterServerPortal interServerPortal = (InterServerPortal) portal;
+            Location returnLoc = interServerPortal.returnLoc;
+            if (returnLoc != null) {
+                Location loc = player.getLocation();
+                loc.setX(returnLoc.getX());
+                loc.setY(returnLoc.getY());
+                loc.setZ(returnLoc.getZ());
+                loc.setYaw(returnLoc.getYaw());
+                portalCommand.setPortalReturnLocation(player, loc);
+            }
         }
     }
 
