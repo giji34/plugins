@@ -316,22 +316,32 @@ public class PortalCommand {
     }
 
     private void saveConfig() throws Exception {
-        File configFile = getConfigFile();
-        FileOutputStream fos = new FileOutputStream(configFile);
-        OutputStreamWriter osw_ = new OutputStreamWriter(fos);
-        final BufferedWriter br = new BufferedWriter(osw_);
-        for (UUID worldUUID : storage.keySet()) {
-            HashMap<Loc, Portal> portals = storage.get(worldUUID);
-            HashMap<String, Portal> names = new HashMap<>();
-            for (Portal portal : portals.values()) {
-                names.put(portal.name, portal);
+        File tmp;
+        try {
+            tmp = File.createTempFile("tmp", null);
+            FileOutputStream fos = new FileOutputStream(tmp.getAbsolutePath());
+            OutputStreamWriter osw_ = new OutputStreamWriter(fos);
+            final BufferedWriter br = new BufferedWriter(osw_);
+            for (UUID worldUUID : storage.keySet()) {
+                HashMap<Loc, Portal> portals = storage.get(worldUUID);
+                HashMap<String, Portal> names = new HashMap<>();
+                for (Portal portal : portals.values()) {
+                    names.put(portal.name, portal);
+                }
+                for (String name : names.keySet()) {
+                    Portal portal = names.get(name);
+                    System.out.println("saveConfig; name=" + name + "; portal=" + portal);
+                    portal.save(br);
+                }
             }
-            for (String name : names.keySet()) {
-                Portal portal = portals.get(name);
-                portal.save(br);
-            }
+            br.close();
+        } catch (Exception e) {
+            throw e;
         }
-        br.close();
+
+        File configFile = getConfigFile();
+        configFile.delete();
+        tmp.renameTo(configFile);
     }
 
     private void loadUserStatus() {
