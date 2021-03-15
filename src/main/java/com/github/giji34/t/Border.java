@@ -59,7 +59,6 @@ public class Border {
             }
             int x = (Integer)xObj;
             int z = (Integer)zObj;
-            System.out.println("[" + x + ", " + z + "]");
             list.add(new Point(x, z));
         }
 

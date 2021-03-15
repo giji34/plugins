@@ -442,6 +442,7 @@ public class Main extends JavaPlugin implements Listener {
                 portalCommand.setPortalReturnLocation(player, loc);
             }
         }
+        this.borders.forget(player);
     }
 
     private boolean handleConnectCommand(Player player, String[] args) {
@@ -488,23 +489,5 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         e.setCancelled(true);
-    }
-}
-
-class MaterialHelper {
-    private MaterialHelper() {}
-
-    static boolean isBoat(Material m) {
-        switch (m) {
-            case OAK_BOAT:
-            case SPRUCE_BOAT:
-            case BIRCH_BOAT:
-            case JUNGLE_BOAT:
-            case ACACIA_BOAT:
-            case DARK_OAK_BOAT:
-                return true;
-            default:
-                return false;
-        }
     }
 }

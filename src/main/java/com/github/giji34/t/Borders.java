@@ -14,33 +14,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-
-class DefaultHashMap<K, V> {
-    final HashMap<K, V> store = new HashMap<>();
-    final Callable factory;
-
-    DefaultHashMap(Callable<V> defaultFactory) {
-        this.factory = defaultFactory;
-    }
-
-    V get(K key) {
-        V v = this.store.get(key);
-        if (v == null) {
-            try {
-                v = (V)this.factory.call();
-                this.store.put(key, v);
-            } catch (Exception e) {
-                System.err.println(e.getMessage());
-            }
-        }
-        return v;
-    }
-
-    void put(K key, V value) {
-        this.store.put(key, value);
-    }
-}
 
 public class Borders {
     private final ArrayList<Border> borders = new ArrayList<>();
@@ -58,7 +31,7 @@ public class Borders {
                 Border border = new Border((ConfigurationSection)data);
                 this.borders.add(border);
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                System.err.println(e.getMessage());
             }
         }
     }
@@ -99,5 +72,11 @@ public class Borders {
             player.setVelocity(new Vector());
             player.teleport(location);
         }
+    }
+
+    public void forget(Player player) {
+        UUID uid = player.getUniqueId();
+        this.lastValidPosition.remove(uid);
+        this.cautionAlreadySentPlayers.remove(uid);
     }
 }
