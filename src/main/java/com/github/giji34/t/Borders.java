@@ -1,0 +1,103 @@
+package com.github.giji34.t;
+
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
+
+import java.awt.*;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+
+class DefaultHashMap<K, V> {
+    final HashMap<K, V> store = new HashMap<>();
+    final Callable factory;
+
+    DefaultHashMap(Callable<V> defaultFactory) {
+        this.factory = defaultFactory;
+    }
+
+    V get(K key) {
+        V v = this.store.get(key);
+        if (v == null) {
+            try {
+                v = (V)this.factory.call();
+                this.store.put(key, v);
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+        return v;
+    }
+
+    void put(K key, V value) {
+        this.store.put(key, value);
+    }
+}
+
+public class Borders {
+    private final ArrayList<Border> borders = new ArrayList<>();
+    private final DefaultHashMap<UUID, HashMap<World.Environment, Point>> lastValidPosition = new DefaultHashMap<>(HashMap::new);
+    private final HashSet<UUID> cautionAlreadySentPlayers = new HashSet<UUID>();
+
+    Borders(File configFile) {
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+        for (String name : config.getKeys(false)) {
+            Object data = config.get(name);
+            if (!(data instanceof ConfigurationSection)) {
+                continue;
+            }
+            try {
+                Border border = new Border((ConfigurationSection)data);
+                this.borders.add(border);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    public void correct(Player player) {
+        if (borders.isEmpty()) {
+            return;
+        }
+        UUID uid = player.getUniqueId();
+        World world = player.getWorld();
+        World.Environment dimension = world.getEnvironment();
+        Location location = player.getLocation();
+        Point position = new Point(location.getBlockX(), location.getBlockZ());
+        boolean ok = false;
+        for (Border border : this.borders) {
+            if (border.dimension != dimension) {
+                continue;
+            }
+            if (border.contains(position)) {
+                ok = true;
+                break;
+            }
+        }
+        if (ok) {
+            this.lastValidPosition.get(uid).put(dimension, position);
+        } else {
+            if (!this.cautionAlreadySentPlayers.contains(uid)) {
+                player.sendMessage(ChatColor.RED + "You have reached the edge of the world");
+                this.cautionAlreadySentPlayers.add(uid);
+            }
+            Point p = this.lastValidPosition.get(uid).get(dimension);
+            if (p == null) {
+                location = world.getSpawnLocation();
+            } else {
+                location.setX(p.x);
+                location.setZ(p.y);
+            }
+            player.setVelocity(new Vector());
+            player.teleport(location);
+        }
+    }
+}

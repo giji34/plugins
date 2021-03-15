@@ -38,6 +38,7 @@ public class Main extends JavaPlugin implements Listener {
     private final PortalCommand portalCommand = new PortalCommand(this);
     private Permission permission;
     private MobSpawnProhibiter mobSpawnProhibiter;
+    private Borders borders;
 
     public Main() {
     }
@@ -52,6 +53,7 @@ public class Main extends JavaPlugin implements Listener {
             this.editCommand.init(pluginDirectory);
             this.portalCommand.init(pluginDirectory);
             this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
+            this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
         } catch (Exception e) {
             getLogger().warning("error: " + e);
         }
@@ -331,11 +333,16 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         Portal portal = portalCommand.filterPortalByCooldown(player, portalCommand.findPortal(player));
-        if (portal == null) {
+        if (portal != null) {
+            portalCommand.markPortalUsed(player, portal);
+            portal.apply(player, this);
             return;
         }
-        portalCommand.markPortalUsed(player, portal);
-        portal.apply(player, this);
+
+        if (this.permission.hasRole(player, "member")) {
+            return;
+        }
+        this.borders.correct(player);
     }
 
     @EventHandler
