@@ -11,3 +11,8 @@ deploy:
 .PHONY: clean
 clean:
 	rm -f build/libs/giji34-*.jar
+
+.PHONY: run
+run:
+	./gradlew assemble
+	(cd minecraft/plugins; rm -f giji34.jar; ln -s "$$(ls -1 ../../build/libs/*.jar)" ./giji34.jar; cd ..; java -jar server.jar nogui)

@@ -5,17 +5,16 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -29,7 +28,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.UUID;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -345,6 +344,26 @@ public class Main extends JavaPlugin implements Listener {
         this.borders.correct(player);
     }
 
+    static final String kCanPlaceOnValue = "[\"minecraft:rail\", \"minecraft:powered_rail\", \"minecraft:detector_rail\", \"minecraft:activator_rail\"]";
+
+    @EventHandler
+    public void onEntitySpawn(EntitySpawnEvent e) {
+        if (e.getEntityType() != EntityType.DROPPED_ITEM) {
+            return;
+        }
+        Item item = (Item)e.getEntity();
+        if (item.getItemStack().getType() != Material.MINECART) {
+            return;
+        }
+        UUID id = e.getEntity().getUniqueId();
+        Server server = getServer();
+        server.getScheduler().runTask(this, () -> {
+            ConsoleCommandSender console = server.getConsoleSender();
+            String command = "data merge entity " + id + " {Item:{tag:{CanPlaceOn:" + kCanPlaceOnValue + "}}}";
+            server.dispatchCommand(console, command);
+        });
+    }
+
     @EventHandler
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -367,29 +386,52 @@ public class Main extends JavaPlugin implements Listener {
                 }
             }
             server.getScheduler().runTaskLater(this, () -> {
-                AtomicBoolean hasDiamondSword = new AtomicBoolean(false);
-                AtomicBoolean hasMinecart = new AtomicBoolean(false);
-                AtomicBoolean hasBoat = new AtomicBoolean(false);
-                player.getInventory().forEach((itemStack -> {
-                    if (itemStack == null) return;
+                PlayerInventory inventory = player.getInventory();
+                boolean hasDiamondSword = false;
+                boolean hasBoat = false;
+                for (int i = 0; i < inventory.getSize(); i++) {
+                    ItemStack itemStack = inventory.getItem(i);
+                    if (itemStack == null) {
+                        continue;
+                    }
                     Material material = itemStack.getType();
                     if (material == Material.DIAMOND_SWORD) {
                         Repair(itemStack);
-                        hasDiamondSword.set(true);
+                        hasDiamondSword = true;
                     } else if (MaterialHelper.isBoat(material)) {
-                        hasBoat.set(true);
-                    } else if (material == Material.MINECART) {
-                        hasMinecart.set(true);
+                        hasBoat = true;
                     }
-                }));
-                if (!hasDiamondSword.get()) {
-                    player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD));
                 }
-                if (!hasBoat.get()) {
-                    player.getInventory().addItem(new ItemStack(Material.OAK_BOAT));
+                if (!hasDiamondSword) {
+                    inventory.addItem(new ItemStack(Material.DIAMOND_SWORD));
                 }
-                if (!hasMinecart.get()) {
-                    player.getInventory().addItem(new ItemStack(Material.MINECART));
+                if (!hasBoat) {
+                    inventory.addItem(new ItemStack(Material.OAK_BOAT));
+                }
+                ConsoleCommandSender console = server.getConsoleSender();
+                ItemStack offHand = inventory.getItemInOffHand();
+                if (inventory.contains(Material.MINECART) || (offHand.getType() == Material.MINECART)) {
+                    ItemStack[] storageContents = inventory.getStorageContents();
+                    for (int i = 0; i < storageContents.length; i++) {
+                        ItemStack itemStack = storageContents[i];
+                        if (itemStack == null) {
+                            continue;
+                        }
+                        if (itemStack.getType() != Material.MINECART) {
+                            continue;
+                        }
+                        String category = i < 9 ? "hotbar" : "inventory";
+                        int offset = i < 9 ? 0 : 9;
+                        String command = "replaceitem entity " + player.getName() + " " + category + "." + (i - offset) + " minecraft:minecart{CanPlaceOn:" + kCanPlaceOnValue + "}";
+                        server.dispatchCommand(console, command);
+                    }
+
+                    if (offHand.getType() == Material.MINECART) {
+                        String command = "replaceitem entity " + player.getName() + " weapon.offhand minecraft:minecart{CanPlaceOn:" + kCanPlaceOnValue + "}";
+                        server.dispatchCommand(console, command);
+                    }
+                } else {
+                    server.dispatchCommand(console, "give " + player.getName() + " minecraft:minecart{CanPlaceOn:" + kCanPlaceOnValue + "}");
                 }
             }, 40);
         }
