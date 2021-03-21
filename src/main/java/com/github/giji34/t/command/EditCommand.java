@@ -267,7 +267,12 @@ public class EditCommand {
                     String opBiome = null;
                     String biome = s.biomeAt(loc);
                     if (biome != null) {
-                        Biome beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
+                        Biome beforeBiome;
+                        try {
+                            beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
+                        } catch (NoSuchMethodError e) {
+                            beforeBiome = world.getBiome(loc.x, loc.z);
+                        }
                         Biome afterBiome = BiomeHelper.Resolve(biome, owner.getServer());
                         if (afterBiome != null && beforeBiome != afterBiome) {
                             opBiome = biome;
