@@ -28,7 +28,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
@@ -78,7 +81,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         PluginCommand guide = getCommand("guide");
         if (guide != null) {
-            guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand,1));
+            guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand, 1));
         }
         PluginCommand connect = getCommand("connect");
         if (connect != null) {
@@ -93,7 +96,7 @@ public class Main extends JavaPlugin implements Listener {
         if (!(sender instanceof Player)) {
             return false;
         }
-        Player player = (Player)sender;
+        Player player = (Player) sender;
         if (invalidGameMode(player)) {
             return false;
         }
@@ -270,7 +273,7 @@ public class Main extends JavaPlugin implements Listener {
     static void Repair(@NotNull ItemStack item) {
         ItemMeta itemMeta = item.getItemMeta();
         if (itemMeta instanceof Damageable) {
-            Damageable damageable = (Damageable)itemMeta;
+            Damageable damageable = (Damageable) itemMeta;
             damageable.setDamage(0);
             item.setItemMeta(itemMeta);
         }
@@ -344,22 +347,56 @@ public class Main extends JavaPlugin implements Listener {
         this.borders.correct(player);
     }
 
-    static final String kCanPlaceOnValue = "[\"minecraft:rail\", \"minecraft:powered_rail\", \"minecraft:detector_rail\", \"minecraft:activator_rail\"]";
+    static final String[] kCanPlaceOnRails = {
+            "minecraft:powered_rail",
+            "minecraft:detector_rail",
+            "minecraft:activator_rail",
+            "minecraft:rail",
+    };
+
+    private static List<String> GetMissingRails(ItemStack itemStack) {
+        List<String> canPlaceOn = ItemStackHelper.GetCanPlaceOn(itemStack);
+        ArrayList<String> rails = new ArrayList<>();
+        for (String rail : kCanPlaceOnRails) {
+            if (!canPlaceOn.contains(rail)) {
+                rails.add(rail);
+            }
+        }
+        return rails;
+    }
+
+    private static String TagCanPlaceOn(List<String> canPlaceOnRails) {
+        String rails = String.join(",", canPlaceOnRails.stream().map(t -> "\"" + t + "\"").collect(Collectors.toList()));
+        return "CanPlaceOn:[" + rails + "]";
+    }
+
+    private static String ItemStringMinecart(List<String> canPlaceOnRails) {
+        String s = "minecraft:minecart";
+        if (!canPlaceOnRails.isEmpty()) {
+            s += "{" + TagCanPlaceOn(canPlaceOnRails) + "}";
+        }
+        return s;
+    }
 
     @EventHandler
     public void onEntitySpawn(EntitySpawnEvent e) {
         if (e.getEntityType() != EntityType.DROPPED_ITEM) {
             return;
         }
-        Item item = (Item)e.getEntity();
-        if (item.getItemStack().getType() != Material.MINECART) {
+        Item item = (Item) e.getEntity();
+        ItemStack itemStack = item.getItemStack();
+        if (itemStack.getType() != Material.MINECART) {
+            return;
+        }
+        List<String> rails = GetMissingRails(itemStack);
+        if (rails.isEmpty()) {
             return;
         }
         UUID id = e.getEntity().getUniqueId();
         Server server = getServer();
         server.getScheduler().runTask(this, () -> {
             ConsoleCommandSender console = server.getConsoleSender();
-            String command = "data merge entity " + id + " {Item:{tag:{CanPlaceOn:" + kCanPlaceOnValue + "}}}";
+            String command = "data merge entity " + id + " {Item:{tag:{" + TagCanPlaceOn(rails) + "}}}";
             server.dispatchCommand(console, command);
         });
     }
@@ -420,18 +457,24 @@ public class Main extends JavaPlugin implements Listener {
                         if (itemStack.getType() != Material.MINECART) {
                             continue;
                         }
-                        String category = i < 9 ? "hotbar" : "inventory";
-                        int offset = i < 9 ? 0 : 9;
-                        String command = "replaceitem entity " + player.getName() + " " + category + "." + (i - offset) + " minecraft:minecart{CanPlaceOn:" + kCanPlaceOnValue + "}";
-                        server.dispatchCommand(console, command);
+                        List<String> rails = GetMissingRails(itemStack);
+                        if (!rails.isEmpty()) {
+                            String category = i < 9 ? "hotbar" : "inventory";
+                            int offset = i < 9 ? 0 : 9;
+                            String command = "replaceitem entity " + player.getUniqueId() + " " + category + "." + (i - offset) + " " + ItemStringMinecart(rails);
+                            server.dispatchCommand(console, command);
+                        }
                     }
 
                     if (offHand.getType() == Material.MINECART) {
-                        String command = "replaceitem entity " + player.getName() + " weapon.offhand minecraft:minecart{CanPlaceOn:" + kCanPlaceOnValue + "}";
-                        server.dispatchCommand(console, command);
+                        List<String> rails = GetMissingRails(offHand);
+                        if (!rails.isEmpty()) {
+                            String command = "replaceitem entity " + player.getUniqueId() + " weapon.offhand " + ItemStringMinecart(rails);
+                            server.dispatchCommand(console, command);
+                        }
                     }
                 } else {
-                    server.dispatchCommand(console, "give " + player.getName() + " minecraft:minecart{CanPlaceOn:" + kCanPlaceOnValue + "}");
+                    server.dispatchCommand(console, "give " + player.getName() + " " + ItemStringMinecart(Arrays.asList(kCanPlaceOnRails.clone())));
                 }
             }, 40);
         }
@@ -520,7 +563,7 @@ public class Main extends JavaPlugin implements Listener {
         if (!(entity instanceof Player)) {
             return;
         }
-        Player player = (Player)entity;
+        Player player = (Player) entity;
         if (!this.permission.hasRole(player, "member")) {
             return;
         }
