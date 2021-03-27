@@ -123,7 +123,7 @@ public class Main extends JavaPlugin implements Listener {
             case "gtree":
                 return editCommand.tree(player, args);
             case "guide":
-                return teleportCommand.guide(player, args);
+                return teleportCommand.guide(player, this.borders, args);
             case "follow":
                 return teleportCommand.follow(player, args);
             case "create_inter_server_portal":

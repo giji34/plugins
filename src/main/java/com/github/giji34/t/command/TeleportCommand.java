@@ -1,5 +1,6 @@
 package com.github.giji34.t.command;
 
+import com.github.giji34.t.Borders;
 import com.github.giji34.t.Landmark;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -108,7 +109,7 @@ public class TeleportCommand {
         return true;
     }
 
-    public boolean guide(Player player, String[] args) {
+    public boolean guide(Player player, Borders borders, String[] args) {
         if (args.length != 2) {
             return false;
         }
@@ -144,14 +145,19 @@ public class TeleportCommand {
             return true;
         }
 
-        targetPlayer.sendMessage(ChatColor.GRAY + "\"" + landmark.name + "\" に移動します");
-        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null) {
-            player.setSpectatorTarget(null);
-        }
         Location loc = targetPlayer.getLocation();
         loc.setX(landmark.location.getX());
         loc.setY(landmark.location.getY());
         loc.setZ(landmark.location.getZ());
+        if (!borders.contains(loc)) {
+            player.sendMessage(ChatColor.RED + "案内先が worldborder の範囲外です");
+            return true;
+        }
+
+        targetPlayer.sendMessage(ChatColor.GRAY + "\"" + landmark.name + "\" に移動します");
+        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null) {
+            player.setSpectatorTarget(null);
+        }
         player.setGameMode(GameMode.SPECTATOR);
         targetPlayer.teleport(loc);
         player.teleport(loc);

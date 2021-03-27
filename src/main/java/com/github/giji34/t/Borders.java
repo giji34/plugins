@@ -36,6 +36,24 @@ public class Borders {
         }
     }
 
+    public boolean contains(Location location) {
+        World world = location.getWorld();
+        if (world == null) {
+            return false;
+        }
+        World.Environment dimension = world.getEnvironment();
+        Point position = new Point(location.getBlockX(), location.getBlockZ());
+        for (Border border : this.borders) {
+            if (border.dimension != dimension) {
+                continue;
+            }
+            if (border.contains(position)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void correct(Player player) {
         if (borders.isEmpty()) {
             return;
