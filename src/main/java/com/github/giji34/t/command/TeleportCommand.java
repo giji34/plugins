@@ -20,13 +20,19 @@ import java.util.UUID;
 public class TeleportCommand {
     final Plugin owner;
     HashMap<UUID, HashMap<String, Landmark>> _knownLandmarks;
+    File pluginDirectory;
 
     public TeleportCommand(Plugin owner) {
         this.owner = owner;
     }
 
     public void init(File pluginDirectory) throws Exception {
-        File json = new File(pluginDirectory, "buildings.tsv");
+        this.pluginDirectory = pluginDirectory;
+        reload();
+    }
+
+    public void reload() throws Exception {
+        File json = new File(this.pluginDirectory, "buildings.tsv");
         if (json.exists()) {
             HashMap<UUID, HashMap<String, Landmark>> landmarks = new HashMap<>();
             BufferedReader br = new BufferedReader(new FileReader(json));

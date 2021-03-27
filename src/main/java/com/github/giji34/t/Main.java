@@ -61,6 +61,18 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
+    private void reload() {
+        File jar = getFile();
+        File pluginDirectory = new File(jar.getParent(), "giji34");
+        this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
+        this.portalCommand.reload();
+        this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
+        this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
+        Server server = getServer();
+        CommandSender console = server.getConsoleSender();
+        server.dispatchCommand(console, "whitelist reload");
+    }
+
     @Override
     public void onEnable() {
         PluginCommand tpb = getCommand("tpb");
@@ -144,6 +156,8 @@ public class Main extends JavaPlugin implements Listener {
                 return this.handleConnectCommand(player, args);
             case "kusa":
                 return editCommand.kusa(player);
+            case "giji34":
+                return this.handleAdminCommand(player, args);
             default:
                 return false;
         }
@@ -548,6 +562,28 @@ public class Main extends JavaPlugin implements Listener {
         }
         player.sendMessage(args[0] + " に接続しています...");
         return true;
+    }
+
+    private boolean handleAdminCommand(Player player, String[] args) {
+        if (!this.permission.hasRole(player, "admin")) {
+            return false;
+        }
+        if (!player.isOp()) {
+            return false;
+        }
+        if (args.length < 1) {
+            return false;
+        }
+        String subCommand = args[0];
+        switch (subCommand) {
+            case "reload": {
+                this.reload();
+                player.sendMessage("reload しました");
+                return true;
+            }
+            default:
+                return false;
+        }
     }
 
     @EventHandler

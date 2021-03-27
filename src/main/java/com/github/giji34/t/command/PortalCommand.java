@@ -48,6 +48,10 @@ public class PortalCommand {
         this.loadUserStatus();
     }
 
+    public void reload() {
+        this.loadConfig();
+    }
+
     File getConfigFile() {
         return new File(pluginDirectory, "portals.yml");
     }
