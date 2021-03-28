@@ -158,6 +158,8 @@ public class Main extends JavaPlugin implements Listener {
                 return editCommand.kusa(player);
             case "giji34":
                 return this.handleAdminCommand(player, args);
+            case "gclone":
+                return this.handleCloneCommand(player, args);
             default:
                 return false;
         }
@@ -584,6 +586,21 @@ public class Main extends JavaPlugin implements Listener {
             default:
                 return false;
         }
+    }
+
+    private boolean handleCloneCommand(Player player, String[] args) {
+        Server server = getServer();
+        CommandSender console = server.getConsoleSender();
+        for (int i = 0; i < args.length; i++) {
+            try {
+                Integer.parseInt(args[i], 10);
+            } catch (Exception e) {
+                player.sendMessage(ChatColor.RED + "座標の値が不正です: " + args[i]);
+                return false;
+            }
+        }
+        String command = "clone " + String.join(" ", args);
+        return server.dispatchCommand(console, command);
     }
 
     @EventHandler
