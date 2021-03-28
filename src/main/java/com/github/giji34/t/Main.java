@@ -99,6 +99,10 @@ public class Main extends JavaPlugin implements Listener {
         if (connect != null) {
             connect.setTabCompleter(new StringListTabCompleter(new String[]{"2434_main", "2434_world06", "hololive_01", "en_hololive", "hololive_00"}));
         }
+        PluginCommand gclone = getCommand("gclone");
+        if (gclone != null) {
+            gclone.setTabCompleter(new LookingAtTabCompleter());
+        }
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
     }
