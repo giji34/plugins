@@ -3,10 +3,7 @@ package com.github.giji34.t;
 import com.github.giji34.t.command.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.command.PluginCommand;
+import org.bukkit.command.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -109,6 +106,10 @@ public class Main extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (sender instanceof ConsoleCommandSender && label.equals("giji34")) {
+            this.handleAdminCommand(sender, args);
+            return true;
+        }
         if (!(sender instanceof Player)) {
             return false;
         }
@@ -570,21 +571,27 @@ public class Main extends JavaPlugin implements Listener {
         return true;
     }
 
-    private boolean handleAdminCommand(Player player, String[] args) {
-        if (!this.permission.hasRole(player, "admin")) {
-            return false;
-        }
-        if (!player.isOp()) {
-            return false;
-        }
+    private boolean handleAdminCommand(CommandSender sender, String[] args) {
         if (args.length < 1) {
             return false;
+        }
+        Player player = null;
+        if (sender instanceof Player) {
+            if (!this.permission.hasRole(player, "admin")) {
+                return false;
+            }
+            if (!player.isOp()) {
+                return false;
+            }
+            player = (Player)sender;
         }
         String subCommand = args[0];
         switch (subCommand) {
             case "reload": {
                 this.reload();
-                player.sendMessage("reload しました");
+                if (player != null) {
+                    player.sendMessage("reload しました");
+                }
                 return true;
             }
             default:
@@ -604,7 +611,14 @@ public class Main extends JavaPlugin implements Listener {
             }
         }
         String command = "clone " + String.join(" ", args);
-        return server.dispatchCommand(console, command);
+        try {
+            if (!server.dispatchCommand(console, command)) {
+                player.sendMessage(ChatColor.RED + "コマンドが失敗しました");
+            }
+        } catch (CommandException e) {
+            player.sendMessage(ChatColor.RED + e.getLocalizedMessage());
+        }
+        return true;
     }
 
     @EventHandler
