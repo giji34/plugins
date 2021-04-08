@@ -21,9 +21,26 @@ public class Borders {
     private final HashSet<UUID> cautionAlreadySentPlayers = new HashSet<UUID>();
 
     Borders(File configFile) {
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-        for (String name : config.getKeys(false)) {
-            Object data = config.get(name);
+        YamlConfiguration root = YamlConfiguration.loadConfiguration(configFile);
+        Object setsObject = root.get("sets");
+        if (!(setsObject instanceof ConfigurationSection)) {
+            return;
+        }
+        ConfigurationSection sets = (ConfigurationSection) setsObject;
+
+        Object bordersObject = sets.get("borders");
+        if (!(bordersObject instanceof ConfigurationSection)){
+            return;
+        }
+        ConfigurationSection borders = (ConfigurationSection) bordersObject;
+
+        Object areasObject = borders.get("areas");
+        if (!(areasObject instanceof ConfigurationSection)) {
+            return;
+        }
+        ConfigurationSection areas = (ConfigurationSection) areasObject;
+        for (String name : areas.getKeys(false)) {
+            Object data = areas.get(name);
             if (!(data instanceof ConfigurationSection)) {
                 continue;
             }

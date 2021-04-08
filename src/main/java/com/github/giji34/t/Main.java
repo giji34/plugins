@@ -47,24 +47,26 @@ public class Main extends JavaPlugin implements Listener {
         try {
             File jar = getFile();
             File pluginDirectory = new File(jar.getParent(), "giji34");
-            this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
             this.teleportCommand.init(pluginDirectory);
             this.editCommand.init(pluginDirectory);
-            this.portalCommand.init(pluginDirectory);
-            this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
-            this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
+            this.reloadExceptWhitelist();
         } catch (Exception e) {
             getLogger().warning("error: " + e);
         }
     }
 
-    private void reload() {
+    private void reloadExceptWhitelist() {
         File jar = getFile();
         File pluginDirectory = new File(jar.getParent(), "giji34");
         this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
         this.portalCommand.reload();
         this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
-        this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
+        File dynmap = new File(pluginDirectory.getParentFile(), "dynmap");
+        this.borders = new Borders(new File(dynmap, "markers.yml"));
+    }
+
+    private void reload() {
+        this.reloadExceptWhitelist();
         Server server = getServer();
         CommandSender console = server.getConsoleSender();
         server.dispatchCommand(console, "whitelist reload");
