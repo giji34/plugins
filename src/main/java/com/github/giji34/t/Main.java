@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -103,6 +104,8 @@ public class Main extends JavaPlugin implements Listener {
         }
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
+
+        this.setupGameRules();
     }
 
     @Override
@@ -644,5 +647,26 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
         e.setCancelled(true);
+    }
+
+    private void setupGameRules() {
+        Server server = this.getServer();
+        PluginManager manager = server.getPluginManager();
+        if (manager.getPlugin("RandomCoords2") == null) {
+            return;
+        }
+        for (World world : server.getWorlds()) {
+            world.setGameRule(GameRule.DISABLE_RAIDS, true);
+            world.setGameRule(GameRule.DO_INSOMNIA, false);
+            world.setGameRule(GameRule.DO_PATROL_SPAWNING, false);
+            world.setGameRule(GameRule.DO_TRADER_SPAWNING, false);
+            world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+            world.setThundering(false);
+            world.setStorm(false);
+            world.setGameRule(GameRule.KEEP_INVENTORY, true);
+            world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true);
+        }
+        server.setDefaultGameMode(GameMode.ADVENTURE);
+        server.setIdleTimeout(10);
     }
 }
