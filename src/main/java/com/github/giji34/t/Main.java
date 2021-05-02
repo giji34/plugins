@@ -370,6 +370,8 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         addPotionEffects(player);
+        updateIdleTimeout();
+
         if (this.permission.hasRole(player, "member")) {
             portalCommand.setAnyPortalCooldown(player);
 
@@ -445,6 +447,16 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
+    private void updateIdleTimeout() {
+        Server server = getServer();
+        long numOpPlayers = server.getOnlinePlayers().stream().filter(Player::isOp).count();
+        if (numOpPlayers > 0) {
+            server.setIdleTimeout(0);
+        } else {
+            server.setIdleTimeout(10);
+        }
+    }
+
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         final Player player = event.getPlayer();
@@ -475,6 +487,8 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        updateIdleTimeout();
+
         Portal portal = portalCommand.getCoolingdownPortal(player);
         if (portal == null) {
             portalCommand.setPortalReturnLocation(player, null);
