@@ -182,55 +182,63 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
-        if (!this.permission.hasRole(player, "member")) {
-            return;
+        Action action = e.getAction();
+        if (action == Action.RIGHT_CLICK_AIR && e.hasItem() && player.getGameMode() == GameMode.ADVENTURE) {
+            ItemStack itemStack = e.getItem();
+            if (itemStack != null && itemStack.getType() == Material.FIREWORK_ROCKET) {
+                ItemStack maybeElytra = player.getInventory().getChestplate();
+                if (maybeElytra != null && maybeElytra.getType() == Material.ELYTRA) {
+                    Repair(maybeElytra);
+                }
+            }
         }
-        if (invalidGameMode(player)) {
-            return;
-        }
-        if (!e.hasItem()) {
-            return;
-        }
-        ItemStack tool = e.getItem();
-        if (tool == null) {
-            return;
-        }
-        Material toolType = tool.getType();
-        if (toolType == Material.WOODEN_AXE) {
-            Block block = e.getClickedBlock();
-            if (block == null) {
+
+        if (this.permission.hasRole(player, "member")) {
+            if (invalidGameMode(player)) {
                 return;
             }
-            EquipmentSlot hand = e.getHand();
-            if (hand != EquipmentSlot.HAND) {
+            if (!e.hasItem()) {
                 return;
             }
-            Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-            Action action = e.getAction();
-            if (action == Action.LEFT_CLICK_BLOCK) {
-                editCommand.setSelectionStartBlock(player, loc);
-            } else if (action == Action.RIGHT_CLICK_BLOCK) {
-                editCommand.setSelectionEndBlock(player, loc);
-            } else {
+            ItemStack tool = e.getItem();
+            if (tool == null) {
                 return;
             }
-            e.setCancelled(true);
-        } else if (toolType == Material.SEAGRASS) {
-            Block block = e.getClickedBlock();
-            if (block == null) {
-                return;
-            }
-            EquipmentSlot hand = e.getHand();
-            if (hand != EquipmentSlot.HAND) {
-                return;
-            }
-            Action action = e.getAction();
-            if (action != Action.LEFT_CLICK_BLOCK) {
-                return;
-            }
-            Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-            if (EditCommand.TallSeaGrass(player, loc)) {
+            Material toolType = tool.getType();
+            if (toolType == Material.WOODEN_AXE) {
+                Block block = e.getClickedBlock();
+                if (block == null) {
+                    return;
+                }
+                EquipmentSlot hand = e.getHand();
+                if (hand != EquipmentSlot.HAND) {
+                    return;
+                }
+                Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+                if (action == Action.LEFT_CLICK_BLOCK) {
+                    editCommand.setSelectionStartBlock(player, loc);
+                } else if (action == Action.RIGHT_CLICK_BLOCK) {
+                    editCommand.setSelectionEndBlock(player, loc);
+                } else {
+                    return;
+                }
                 e.setCancelled(true);
+            } else if (toolType == Material.SEAGRASS) {
+                Block block = e.getClickedBlock();
+                if (block == null) {
+                    return;
+                }
+                EquipmentSlot hand = e.getHand();
+                if (hand != EquipmentSlot.HAND) {
+                    return;
+                }
+                if (action != Action.LEFT_CLICK_BLOCK) {
+                    return;
+                }
+                Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+                if (EditCommand.TallSeaGrass(player, loc)) {
+                    e.setCancelled(true);
+                }
             }
         }
     }
