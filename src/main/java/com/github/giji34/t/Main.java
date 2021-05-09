@@ -18,17 +18,18 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Main extends JavaPlugin implements Listener {
@@ -39,6 +40,10 @@ public class Main extends JavaPlugin implements Listener {
     private Permission permission;
     private MobSpawnProhibiter mobSpawnProhibiter;
     private Borders borders;
+
+    private static final int kPlayerIdleTimeoutMinutes = 10;
+    private BukkitTask playerActivityWatchdog;
+    private HashMap<UUID, LocalDateTime> playerActivity = new HashMap<>();
 
     public Main() {
     }
@@ -105,7 +110,13 @@ public class Main extends JavaPlugin implements Listener {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
 
+        this.startPlayerActivityWatchdog();
         this.setupGameRules();
+    }
+
+    @Override
+    public void onDisable() {
+        this.stopPlayerActivityWatchdog();
     }
 
     @Override
@@ -307,17 +318,40 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
+        this.applyPortalTeleport(player);
+        this.correctPlayerLocation(player);
+        this.updatePlayerActivity(player);
+    }
+
+    private void applyPortalTeleport(Player player) {
         Portal portal = portalCommand.filterPortalByCooldown(player, portalCommand.findPortal(player));
-        if (portal != null) {
-            portalCommand.markPortalUsed(player, portal);
-            portal.apply(player, this);
+        if (portal == null) {
             return;
         }
+        portalCommand.markPortalUsed(player, portal);
+        portal.apply(player, this);
+    }
 
+    private void correctPlayerLocation(Player player) {
         if (this.permission.hasRole(player, "member")) {
             return;
         }
         this.borders.correct(player);
+    }
+
+    private boolean isSightseeingServer() {
+        Server server = getServer();
+        Plugin hibernate = server.getPluginManager().getPlugin("Hibernate");
+        return hibernate == null;
+    }
+
+    private void updatePlayerActivity(Player player) {
+        if (this.permission.hasRole(player, "member") && isSightseeingServer()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        UUID uuid = player.getUniqueId();
+        this.playerActivity.put(uuid, now);
     }
 
     static final String[] kCanPlaceOnRails = {
@@ -378,7 +412,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         addPotionEffects(player);
-        updateIdleTimeout();
+        this.playerActivity.put(player.getUniqueId(), LocalDateTime.now());
 
         if (this.permission.hasRole(player, "member")) {
             portalCommand.setAnyPortalCooldown(player);
@@ -455,16 +489,6 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
-    private void updateIdleTimeout() {
-        Server server = getServer();
-        long numOpPlayers = server.getOnlinePlayers().stream().filter(Player::isOp).count();
-        if (numOpPlayers > 0) {
-            server.setIdleTimeout(0);
-        } else {
-            server.setIdleTimeout(10);
-        }
-    }
-
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         final Player player = event.getPlayer();
@@ -495,7 +519,7 @@ public class Main extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        updateIdleTimeout();
+        this.playerActivity.remove(player.getUniqueId());
 
         Portal portal = portalCommand.getCoolingdownPortal(player);
         if (portal == null) {
@@ -629,6 +653,37 @@ public class Main extends JavaPlugin implements Listener {
             world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true);
         }
         server.setDefaultGameMode(GameMode.ADVENTURE);
-        server.setIdleTimeout(10);
+        server.setIdleTimeout(0);
+    }
+
+    private void startPlayerActivityWatchdog() {
+        this.playerActivity.clear();
+        Plugin hibernate = getServer().getPluginManager().getPlugin("Hibernate");
+        if (hibernate == null) {
+            return;
+        }
+        this.playerActivityWatchdog = getServer().getScheduler().runTaskTimer(this, () -> {
+            final Server server = getServer();
+            final LocalDateTime now = LocalDateTime.now();
+            for (Player player : server.getOnlinePlayers()) {
+                UUID uuid = player.getUniqueId();
+                LocalDateTime lastActive = this.playerActivity.get(uuid);
+                if (lastActive == null) {
+                    continue;
+                }
+                long minutes = ChronoUnit.MINUTES.between(lastActive, now);
+                if (minutes >= kPlayerIdleTimeoutMinutes) {
+                    this.playerActivity.remove(uuid);
+                    server.dispatchCommand(server.getConsoleSender(), "kick " + player.getName() + " You have been kicked for idling too long");
+                }
+            }
+        }, 0, 5 * 20);
+    }
+
+    private void stopPlayerActivityWatchdog() {
+        if (this.playerActivityWatchdog != null) {
+            getServer().getScheduler().cancelTask(this.playerActivityWatchdog.getTaskId());
+            this.playerActivityWatchdog = null;
+        }
     }
 }
