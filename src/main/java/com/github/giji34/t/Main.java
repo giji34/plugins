@@ -658,10 +658,6 @@ public class Main extends JavaPlugin implements Listener {
 
     private void startPlayerActivityWatchdog() {
         this.playerActivity.clear();
-        Plugin hibernate = getServer().getPluginManager().getPlugin("Hibernate");
-        if (hibernate == null) {
-            return;
-        }
         this.playerActivityWatchdog = getServer().getScheduler().runTaskTimer(this, () -> {
             final Server server = getServer();
             final LocalDateTime now = LocalDateTime.now();
