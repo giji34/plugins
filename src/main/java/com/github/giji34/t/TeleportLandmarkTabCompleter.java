@@ -1,6 +1,7 @@
 package com.github.giji34.t;
 
 import com.github.giji34.t.command.TeleportCommand;
+import org.bukkit.World.Environment;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -41,11 +42,11 @@ class TeleportLandmarkTabCompleter implements TabCompleter {
     }
 
     ArrayList<Landmark> pickupCandidates(Player player, String arg) {
-        UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> landmarks = teleportCommand.ensureKnownLandmarks(uid);
+        Environment dimension = player.getWorld().getEnvironment();
+        HashMap<String, Landmark> landmarks = teleportCommand.ensureKnownLandmarks(dimension);
         ArrayList<Landmark> availableLandmarks = new ArrayList<>();
         landmarks.forEach((yomi, landmark) -> {
-            if (!landmark.worldUID.equals(uid)) {
+            if (landmark.dimension != dimension) {
                 return;
             }
             if (arg.length() == 0) {

@@ -6,6 +6,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
@@ -15,11 +16,10 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.UUID;
 
 public class TeleportCommand {
     final Plugin owner;
-    HashMap<UUID, HashMap<String, Landmark>> _knownLandmarks;
+    HashMap<Environment, HashMap<String, Landmark>> _knownLandmarks;
     File pluginDirectory;
 
     public TeleportCommand(Plugin owner) {
@@ -34,7 +34,7 @@ public class TeleportCommand {
     public void reload() throws Exception {
         File json = new File(this.pluginDirectory, "buildings.tsv");
         if (json.exists()) {
-            HashMap<UUID, HashMap<String, Landmark>> landmarks = new HashMap<>();
+            HashMap<Environment, HashMap<String, Landmark>> landmarks = new HashMap<>();
             BufferedReader br = new BufferedReader(new FileReader(json));
             String line;
             int lineN = 0;
@@ -52,20 +52,34 @@ public class TeleportCommand {
                 double x;
                 double y;
                 double z;
-                UUID uid;
                 try {
                     x = parseX(tokens[2], 0);
                     y = parseY(tokens[3], 0);
                     z = parseZ(tokens[4], 0);
-                    uid = UUID.fromString(tokens[5]);
                 } catch (Exception e) {
                     owner.getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
                     continue;
                 }
-                if (!landmarks.containsKey(uid)) {
-                    landmarks.put(uid, new HashMap<>());
+                Environment dimension;
+                try {
+                    int d = Integer.parseInt(tokens[5], 10);
+                    if (d == 0) {
+                        dimension = Environment.NORMAL;
+                    } else if (d == 1) {
+                        dimension = Environment.THE_END;
+                    } else if (d == -1) {
+                        dimension = Environment.NETHER;
+                    } else {
+                        throw new RuntimeException("unknown dimension: d=" + d);
+                    }
+                } catch (Exception e) {
+                    owner.getLogger().warning("line " + lineN + " parse error: \"" + line + "\"");
+                    continue;
                 }
-                landmarks.get(uid).put(yomi, new Landmark(name, new Vector(x, y, z), uid));
+                if (!landmarks.containsKey(dimension)) {
+                    landmarks.put(dimension, new HashMap<>());
+                }
+                landmarks.get(dimension).put(yomi, new Landmark(name, new Vector(x, y, z), dimension));
             }
             _knownLandmarks = landmarks;
         } else {
@@ -128,7 +142,7 @@ public class TeleportCommand {
 
         Player targetPlayer = null;
         World world = player.getWorld();
-        if (!world.getUID().equals(landmark.worldUID)) {
+        if (world.getEnvironment() != landmark.dimension) {
             player.sendMessage(ChatColor.RED + "建物と違うディメンジョンに居るため案内できません");
             return true;
         }
@@ -146,7 +160,7 @@ public class TeleportCommand {
             player.sendMessage(ChatColor.RED + "自分自身を案内しようとしています。tpb コマンドを使って下さい");
             return true;
         }
-        if (!targetPlayer.getWorld().getUID().equals(landmark.worldUID)) {
+        if (targetPlayer.getWorld().getEnvironment() != landmark.dimension) {
             player.sendMessage(ChatColor.RED + "案内対象プレイヤーが建物と違うディメンジョンに居るため案内できません");
             return true;
         }
@@ -201,8 +215,8 @@ public class TeleportCommand {
 
     @Nullable
     Landmark findLandmark(Player player, String landmarkName) {
-        UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks(uid);
+        Environment dimension = player.getWorld().getEnvironment();
+        HashMap<String, Landmark> knownLandmarks = ensureKnownLandmarks(dimension);
         Landmark landmark = null;
         if (knownLandmarks.containsKey(landmarkName)) {
             landmark = knownLandmarks.get(landmarkName);
@@ -222,7 +236,7 @@ public class TeleportCommand {
             player.sendMessage(ChatColor.RED + "\"" + landmarkName + "\"に合致する建物が見つかりません");
             return null;
         }
-        if (landmark.worldUID.equals(uid)) {
+        if (landmark.dimension == dimension) {
             return landmark;
         } else {
             player.sendMessage(ChatColor.RED + "建物 \"" + landmarkName + "\" は現在居るディメンジョンには存在しません");
@@ -231,11 +245,11 @@ public class TeleportCommand {
     }
 
     ArrayList<Landmark> pickupCandidates(Player player, String arg) {
-        UUID uid = player.getWorld().getUID();
-        HashMap<String, Landmark> landmarks = ensureKnownLandmarks(uid);
+        Environment dimension = player.getWorld().getEnvironment();
+        HashMap<String, Landmark> landmarks = ensureKnownLandmarks(dimension);
         ArrayList<Landmark> availableLandmarks = new ArrayList<>();
         landmarks.forEach((yomi, landmark) -> {
-            if (!landmark.worldUID.equals(uid)) {
+            if (landmark.dimension != dimension) {
                 return;
             }
             if (arg.length() == 0) {
@@ -247,9 +261,9 @@ public class TeleportCommand {
         return availableLandmarks;
     }
 
-    public synchronized HashMap<String, Landmark> ensureKnownLandmarks(UUID uuid) {
-        if (_knownLandmarks.containsKey(uuid)) {
-            return new HashMap<>(_knownLandmarks.get(uuid));
+    public synchronized HashMap<String, Landmark> ensureKnownLandmarks(Environment dimension) {
+        if (_knownLandmarks.containsKey(dimension)) {
+            return new HashMap<>(_knownLandmarks.get(dimension));
         } else {
             return new HashMap<>();
         }
