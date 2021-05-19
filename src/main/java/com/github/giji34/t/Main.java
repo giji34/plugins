@@ -572,13 +572,13 @@ public class Main extends JavaPlugin implements Listener {
         }
         Player player = null;
         if (sender instanceof Player) {
+            player = (Player)sender;
             if (!this.permission.hasRole(player, "admin")) {
                 return false;
             }
             if (!player.isOp()) {
                 return false;
             }
-            player = (Player)sender;
         }
         String subCommand = args[0];
         switch (subCommand) {
