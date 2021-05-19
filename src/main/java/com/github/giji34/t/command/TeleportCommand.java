@@ -84,7 +84,7 @@ public class TeleportCommand {
             _knownLandmarks = landmarks;
         } else {
             BufferedWriter bw = new BufferedWriter(new FileWriter(json));
-            bw.write("#地点名\t地点名読み\tX\tY\tZ\tワールドUID");
+            bw.write("#地点名\t地点名読み\tX\tY\tZ\tdimension(0,1,-1)");
             bw.newLine();
             bw.flush();
             bw.close();

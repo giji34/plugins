@@ -68,6 +68,11 @@ public class Main extends JavaPlugin implements Listener {
         File jar = getFile();
         File pluginDirectory = new File(jar.getParent(), "giji34");
         this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
+        try {
+            this.teleportCommand.reload();
+        } catch (Exception e) {
+            getLogger().warning("reload failed: " + e.getMessage());
+        }
         this.portalCommand.reload();
         this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
         File dynmap = new File(pluginDirectory.getParentFile(), "dynmap");
