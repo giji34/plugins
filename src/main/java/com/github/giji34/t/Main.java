@@ -287,9 +287,6 @@ public class Main extends JavaPlugin implements Listener {
         CreatureSpawnEvent.SpawnReason reason = e.getSpawnReason();
         LivingEntity entity = e.getEntity();
         EntityType entityType = entity.getType();
-        if (entityType == EntityType.CAT) {
-            System.out.println("Cat spawned with reason: " + reason + ", location:" + entity.getLocation());
-        }
         switch (reason) {
             case SPAWNER_EGG:
                 switch (entityType) {
@@ -319,6 +316,11 @@ public class Main extends JavaPlugin implements Listener {
                 return;
             case BUILD_WITHER:
                 e.setCancelled(true);
+                return;
+            case DEFAULT:
+                if (entityType == EntityType.CAT) {
+                    e.setCancelled(true);
+                }
                 return;
         }
     }
