@@ -683,7 +683,7 @@ public class Main extends JavaPlugin implements Listener {
                 long minutes = ChronoUnit.MINUTES.between(lastActive, now);
                 if (minutes >= kPlayerIdleTimeoutMinutes) {
                     this.playerActivity.remove(uuid);
-                    server.dispatchCommand(server.getConsoleSender(), "kick " + player.getName() + " You have been kicked for idling too long");
+                    player.kickPlayer("You have been kicked for idling too long");
                 }
             }
         }, 0, 5 * 20);
