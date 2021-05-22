@@ -358,12 +358,13 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private void updatePlayerActivity(Player player) {
-        if (this.permission.hasRole(player, "member") && isSightseeingServer()) {
-            return;
-        }
-        LocalDateTime now = LocalDateTime.now();
         UUID uuid = player.getUniqueId();
-        this.playerActivity.put(uuid, now);
+        if (this.permission.hasRole(player, "member") && isSightseeingServer()) {
+            this.playerActivity.remove(uuid);
+        } else {
+            LocalDateTime now = LocalDateTime.now();
+            this.playerActivity.put(uuid, now);
+        }
     }
 
     static final String[] kCanPlaceOnRails = {
