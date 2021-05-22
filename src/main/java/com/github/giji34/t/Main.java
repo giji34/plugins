@@ -320,6 +320,8 @@ public class Main extends JavaPlugin implements Listener {
             case DEFAULT:
                 if (entityType == EntityType.CAT) {
                     e.setCancelled(true);
+                } else {
+                    System.out.println(entityType + " spawned with reason: " + reason + " at " + entity.getLocation());
                 }
                 return;
         }
