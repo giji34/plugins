@@ -50,4 +50,9 @@ class SelectedBlockRangeRegistry {
         }
         return this.storage.get(name);
     }
+
+    void forget(Player player) {
+        String name = key(player);
+        this.storage.remove(name);
+    }
 }

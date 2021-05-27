@@ -17,7 +17,8 @@ class UndoOperationRegistry {
         if (op == null) {
             return;
         }
-        registry.put(player.getName(), op);
+        String key = this.key(player);
+        registry.put(key, op);
     }
 
     @Nullable
@@ -25,7 +26,7 @@ class UndoOperationRegistry {
         if (player == null) {
             return null;
         }
-        String key = player.getName();
+        String key = this.key(player);
         if (!registry.containsKey(key)) {
             return null;
         }
@@ -36,5 +37,13 @@ class UndoOperationRegistry {
         }
         registry.remove(key);
         return operation;
+    }
+
+    void forget(Player player) {
+        registry.remove(key(player));
+    }
+
+    private String key(Player player) {
+        return player.getName();
     }
 }

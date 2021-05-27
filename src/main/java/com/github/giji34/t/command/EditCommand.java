@@ -636,4 +636,9 @@ public class EditCommand {
         upper.setBlockData(tallSeaGrassUpper, true);
         return true;
     }
+
+    public void forget(Player player) {
+        this.selectedBlockRangeRegistry.forget(player);
+        this.undoOperationRegistry.forget(player);
+    }
 }
