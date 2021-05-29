@@ -109,11 +109,11 @@ public class TeleportCommand {
     }
 
     public boolean teleportToLandmark(Player player, String[] args) {
-        if (args.length != 1) {
+        if (args.length == 0) {
             return false;
         }
         Location loc = player.getLocation().clone();
-        String name = args[0];
+        String name = String.join(" ", args);
         Landmark landmark = findLandmark(player, name);
         if (landmark == null) {
             return true;
