@@ -561,6 +561,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         this.borders.forget(player);
         this.editCommand.forget(player);
+        this.debugStick.forget(player);
     }
 
     private boolean handleConnectCommand(Player player, String[] args) {

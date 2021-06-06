@@ -83,6 +83,10 @@ class DebugStick {
         SendSubtitle(player, "「" + name + "」を変更しました");
     }
 
+    public void forget(Player player) {
+        properties.remove(player.getUniqueId());
+    }
+
     private static void SendSubtitle(Player player, String subtitle) {
         player.sendTitle("", subtitle, 10, 70, 20);
     }
