@@ -45,6 +45,8 @@ public class Main extends JavaPlugin implements Listener {
     private BukkitTask playerActivityWatchdog;
     private HashMap<UUID, LocalDateTime> playerActivity = new HashMap<>();
 
+    private final DebugStick debugStick = new DebugStick();
+
     public Main() {
     }
 
@@ -203,52 +205,66 @@ public class Main extends JavaPlugin implements Listener {
             }
         }
 
-        if (this.permission.hasRole(player, "member")) {
-            if (invalidGameMode(player)) {
+        if (!this.permission.hasRole(player, "member")) {
+            return;
+        }
+        if (invalidGameMode(player)) {
+            return;
+        }
+        if (!e.hasItem()) {
+            return;
+        }
+        ItemStack tool = e.getItem();
+        if (tool == null) {
+            return;
+        }
+        Material toolType = tool.getType();
+        if (toolType == Material.WOODEN_AXE) {
+            Block block = e.getClickedBlock();
+            if (block == null) {
                 return;
             }
-            if (!e.hasItem()) {
+            EquipmentSlot hand = e.getHand();
+            if (hand != EquipmentSlot.HAND) {
                 return;
             }
-            ItemStack tool = e.getItem();
-            if (tool == null) {
+            Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+            if (action == Action.LEFT_CLICK_BLOCK) {
+                editCommand.setSelectionStartBlock(player, loc);
+            } else if (action == Action.RIGHT_CLICK_BLOCK) {
+                editCommand.setSelectionEndBlock(player, loc);
+            } else {
                 return;
             }
-            Material toolType = tool.getType();
-            if (toolType == Material.WOODEN_AXE) {
-                Block block = e.getClickedBlock();
-                if (block == null) {
-                    return;
-                }
-                EquipmentSlot hand = e.getHand();
-                if (hand != EquipmentSlot.HAND) {
-                    return;
-                }
-                Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-                if (action == Action.LEFT_CLICK_BLOCK) {
-                    editCommand.setSelectionStartBlock(player, loc);
-                } else if (action == Action.RIGHT_CLICK_BLOCK) {
-                    editCommand.setSelectionEndBlock(player, loc);
-                } else {
-                    return;
-                }
+            e.setCancelled(true);
+        } else if (toolType == Material.SEAGRASS) {
+            Block block = e.getClickedBlock();
+            if (block == null) {
+                return;
+            }
+            EquipmentSlot hand = e.getHand();
+            if (hand != EquipmentSlot.HAND) {
+                return;
+            }
+            if (action != Action.LEFT_CLICK_BLOCK) {
+                return;
+            }
+            Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
+            if (EditCommand.TallSeaGrass(player, loc)) {
                 e.setCancelled(true);
-            } else if (toolType == Material.SEAGRASS) {
-                Block block = e.getClickedBlock();
-                if (block == null) {
-                    return;
-                }
-                EquipmentSlot hand = e.getHand();
-                if (hand != EquipmentSlot.HAND) {
-                    return;
-                }
-                if (action != Action.LEFT_CLICK_BLOCK) {
-                    return;
-                }
-                Loc loc = Loc.fromVectorFloored(block.getLocation().toVector());
-                if (EditCommand.TallSeaGrass(player, loc)) {
-                    e.setCancelled(true);
-                }
+            }
+        } else if (toolType == Material.DEBUG_STICK) {
+            if (player.isOp()) {
+                return;
+            }
+            Block block = e.getClickedBlock();
+            if (block == null) {
+                return;
+            }
+            if (action ==  Action.LEFT_CLICK_BLOCK) {
+                this.debugStick.onInteractWithMainHand(player, block);
+            } else if (action == Action.RIGHT_CLICK_BLOCK) {
+                this.debugStick.onInteractWithOffHand(player, block);
             }
         }
     }

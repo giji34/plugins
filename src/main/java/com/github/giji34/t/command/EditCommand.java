@@ -1,6 +1,7 @@
 package com.github.giji34.t.command;
 
 import com.github.giji34.t.BiomeHelper;
+import com.github.giji34.t.BlockPropertyHelper;
 import com.github.giji34.t.Loc;
 import org.bukkit.*;
 import org.bukkit.block.Biome;
@@ -486,9 +487,9 @@ public class EditCommand {
         range.forEach(loc -> {
             Block from = world.getBlockAt(loc.x, loc.y, loc.z);
             String data = toBlockData.getAsString(true);
-            data = MergeBlockData(from.getBlockData().getAsString(true), data, server);
+            data = BlockPropertyHelper.MergeBlockData(from.getBlockData().getAsString(true), data, server);
             if (toBlockData instanceof Leaves) {
-                data = MergeBlockData(data, toBlockData.getMaterial().getKey().toString() + "[persistent=true]", server);
+                data = BlockPropertyHelper.MergeBlockData(data, toBlockData.getMaterial().getKey().toString() + "[persistent=true]", server);
             }
             if (predicate.apply(from)) {
                 operation.register(loc, new ReplaceData(data, null));
@@ -496,61 +497,6 @@ public class EditCommand {
             return true;
         });
         return operation;
-    }
-
-    private static HashMap<String, String> Properties(String blockData) {
-        int begin = blockData.indexOf("[");
-        int end = blockData.indexOf("]");
-        HashMap<String, String> result = new HashMap<>();
-        if (begin < 0 || end < 0) {
-            return result;
-        }
-        String propsString = blockData.substring(begin + 1, end);
-        String[] props = propsString.split(",");
-        for (String prop : props) {
-            String[] kv = prop.split("=");
-            if (kv.length < 2) {
-                continue;
-            }
-            result.put(kv[0], kv[1]);
-        }
-        return result;
-    }
-
-    private static String[] AvailableProperties(Material material, Server server) {
-        String defaultBlockData = server.createBlockData(material).getAsString(false);
-        HashMap<String, String> props = Properties(defaultBlockData);
-        return props.keySet().toArray(new String[]{});
-    }
-
-
-    private static String MergeBlockData(String existing, String next, Server server) {
-        HashMap<String, String> existingProps = Properties(existing);
-        HashMap<String, String> nextProps = Properties(next);
-        BlockData blockData = server.createBlockData(next);
-        Material nextMaterial = blockData.getMaterial();
-        String[] availableProps = AvailableProperties(nextMaterial, server);
-        HashMap<String, String> resultProps = new HashMap<>();
-        for (String key : existingProps.keySet()) {
-            if (Arrays.asList(availableProps).contains(key)) {
-                resultProps.put(key, existingProps.get(key));
-            }
-        }
-        for (String key : nextProps.keySet()) {
-            resultProps.put(key, nextProps.get(key));
-        }
-        String result = nextMaterial.getKey().toString();
-        if (resultProps.size() > 0) {
-            StringBuilder props = new StringBuilder();
-            for (String key : resultProps.keySet()) {
-                if (props.length() > 0) {
-                    props.append(",");
-                }
-                props.append(key + "=" + resultProps.get(key));
-            }
-            result += "[" + props + "]";
-        }
-        return result;
     }
 
     private OffsetDateTime ParseDateString(String s) throws Exception {
