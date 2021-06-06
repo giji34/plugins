@@ -4,10 +4,8 @@ import org.bukkit.Axis;
 import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.Ageable;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.Orientable;
+import org.bukkit.block.data.*;
+import org.bukkit.block.data.type.*;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -85,10 +83,64 @@ public class BlockPropertyHelper {
             int age = ageable.getAge();
             int nextAge = (age + 1) % ageable.getMaximumAge();
             ageable.setAge(nextAge);
+        } else if (name.equals("half") && blockData instanceof Bisected) {
+            Bisected bisected = (Bisected) blockData;
+            Bisected.Half current = bisected.getHalf();
+            Bisected.Half next = Rotate(Bisected.Half.values(), current);
+            bisected.setHalf(next);
+        } else if (name.equals("shape") && blockData instanceof Stairs) {
+            Stairs stairs = (Stairs) blockData;
+            Stairs.Shape current = stairs.getShape();
+            Stairs.Shape next = Rotate(Stairs.Shape.values(), current);
+            stairs.setShape(next);
+        } else if (name.equals("type") && blockData instanceof Slab) {
+            Slab slab = (Slab) blockData;
+            Slab.Type current = slab.getType();
+            Slab.Type next = Rotate(Slab.Type.values(), current);
+            slab.setType(next);
+        } else if (name.equals("type") && blockData instanceof Chest) {
+            Chest chest = (Chest) blockData;
+            Chest.Type current = chest.getType();
+            Chest.Type next = Rotate(Chest.Type.values(), current);
+            chest.setType(next);
+        } else if (name.equals("moisture") && blockData instanceof Farmland) {
+            Farmland farmland = (Farmland) blockData;
+            int current = farmland.getMoisture();
+            int next = (current + 1) % (farmland.getMaximumMoisture() + 1);
+            farmland.setMoisture(next);
+        } else if (name.equals("shape") && blockData instanceof Rail) {
+            Rail rail = (Rail) blockData;
+            Rail.Shape current = rail.getShape();
+            Rail.Shape next = Rotate(rail.getShapes(), current);
+            rail.setShape(next);
+        } else if (name.equals("face") && blockData instanceof FaceAttachable) {
+            FaceAttachable faceAttachable = (FaceAttachable) blockData;
+            FaceAttachable.AttachedFace current = faceAttachable.getAttachedFace();
+            FaceAttachable.AttachedFace next = Rotate(FaceAttachable.AttachedFace.values(), current);
+            faceAttachable.setAttachedFace(next);
+        } else if (blockData instanceof Snow) {
+            Snow snow = (Snow) blockData;
+            int min = snow.getMinimumLayers();
+            int max = snow.getMaximumLayers() + 1;
+            int current = snow.getLayers() - min;
+            int next = (current + 1) % (max - min) + min;
+            snow.setLayers(next);
         } else {
             return false;
         }
         return true;
+    }
+
+    private static <T> T Rotate(T[] available, T current) {
+        int index = -1;
+        for (int i = 0; i < available.length; i++) {
+            if (current.equals(available[i])) {
+                index = i;
+                break;
+            }
+        }
+        int nextIndex = (index + 1) % available.length;
+        return (T)available[nextIndex];
     }
 
     private static <T> T Rotate(Set<T> a, T current) {
