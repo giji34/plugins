@@ -75,7 +75,7 @@ class DebugStick {
             nextBlockData = blockData.getAsString();
         }
         try {
-            block.setBlockData(server.createBlockData(nextBlockData));
+            block.setBlockData(server.createBlockData(nextBlockData), false);
         } catch (IllegalArgumentException e) {
             player.sendMessage(ChatColor.RED + "BlockData の作成に失敗しました. name=" + name + " " + value);
             return;
