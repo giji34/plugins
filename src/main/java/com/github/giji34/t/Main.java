@@ -262,8 +262,10 @@ public class Main extends JavaPlugin implements Listener {
                 return;
             }
             if (action ==  Action.LEFT_CLICK_BLOCK) {
+                e.setCancelled(true);
                 this.debugStick.onInteractWithMainHand(player, block);
             } else if (action == Action.RIGHT_CLICK_BLOCK) {
+                e.setCancelled(true);
                 this.debugStick.onInteractWithOffHand(player, block);
             }
         }
