@@ -31,7 +31,15 @@ public class TeleportCommand {
         reload();
     }
 
-    public void reload() throws Exception {
+    public void reload() {
+        try {
+            this.unsafeReload();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void unsafeReload() throws Exception {
         File json = new File(this.pluginDirectory, "buildings.tsv");
         if (json.exists()) {
             HashMap<Environment, HashMap<String, Landmark>> landmarks = new HashMap<>();
