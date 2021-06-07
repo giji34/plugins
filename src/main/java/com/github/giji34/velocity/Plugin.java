@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
+import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -15,13 +16,16 @@ import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "Giji34VelocityPlugin", version = "1.0", description = "A velocity plugin for giji34", authors = { "kbinani" })
 public class Plugin {
   private final ProxyServer server;
   private final Logger logger;
+  private final HashMap<UUID, String> previousServer = new HashMap<UUID, String>();
 
   @Inject
   public Plugin(ProxyServer server, Logger logger) {
@@ -33,6 +37,11 @@ public class Plugin {
   @Subscribe
   public void onLeave(DisconnectEvent event) {
     Player left = event.getPlayer();
+    Optional<ServerConnection> connection = left.getCurrentServer();
+    if (connection.isPresent()) {
+      String name = connection.get().getServerInfo().getName();
+      previousServer.put(left.getUniqueId(), name);
+    }
     for (Player player : server.getAllPlayers()) {
       if (player.getUniqueId().equals(left.getUniqueId())) {
         continue;
@@ -68,6 +77,28 @@ public class Plugin {
     for (RegisteredServer server : this.server.getAllServers()) {
       server.sendMessage(Component.text(message), MessageType.CHAT);
     }
+  }
+
+  @Subscribe
+  public void onPlayerChooseInitialServerEvent(PlayerChooseInitialServerEvent e) {
+    Player player = e.getPlayer();
+    UUID uuid = player.getUniqueId();
+    if (!this.previousServer.containsKey(uuid)) {
+      return;
+    }
+    String name = this.previousServer.get(uuid);
+    Optional<RegisteredServer> original = e.getInitialServer();
+    if (!original.isPresent()) {
+      return;
+    }
+    if (original.get().getServerInfo().getName().equals(name)) {
+      return;
+    }
+    Optional<RegisteredServer> found = server.getAllServers().stream().filter((server) -> server.getServerInfo().getName().equals(name)).findFirst();
+    if (!found.isPresent()) {
+      return;
+    }
+    e.setInitialServer(found.get());
   }
 
   private void updateTabList() {
