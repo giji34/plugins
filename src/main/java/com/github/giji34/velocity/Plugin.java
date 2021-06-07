@@ -3,12 +3,15 @@ package com.github.giji34.velocity;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
+import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.player.TabList;
 import com.velocitypowered.api.proxy.player.TabListEntry;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
+import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
 import org.slf4j.Logger;
 
@@ -42,11 +45,29 @@ public class Plugin {
   @Subscribe
   public void onProxyInitialize(ProxyInitializeEvent event) {
     server
-        .getScheduler()
-        .buildTask(this, this::updateTabList)
-        .repeat(1, TimeUnit.SECONDS)
-        .delay(1, TimeUnit.SECONDS)
-        .schedule();
+      .getScheduler()
+      .buildTask(this, this::updateTabList)
+      .repeat(1, TimeUnit.SECONDS)
+      .delay(1, TimeUnit.SECONDS)
+      .schedule();
+  }
+
+  @Subscribe
+  public void onPlayerChat(PlayerChatEvent e) {
+    e.setResult(PlayerChatEvent.ChatResult.denied());
+    Player player = e.getPlayer();
+
+    Optional<ServerConnection> currentServer = player.getCurrentServer();
+    String message = "";
+    if (currentServer.isPresent()) {
+      message = "[" + currentServer.get().getServerInfo().getName() + "]";
+    }
+    message += "<" + player.getUsername() + "> ";
+    message += e.getMessage();
+
+    for (RegisteredServer server : this.server.getAllServers()) {
+      server.sendMessage(Component.text(message), MessageType.CHAT);
+    }
   }
 
   private void updateTabList() {
@@ -77,11 +98,11 @@ public class Plugin {
         }
         if (entry == null) {
           entry = TabListEntry.builder()
-              .profile(current.getGameProfile())
-              .displayName(Component.text(current.getUsername()))
-              .gameMode(3)
-              .tabList(list)
-              .build();
+            .profile(current.getGameProfile())
+            .displayName(Component.text(current.getUsername()))
+            .gameMode(3)
+            .tabList(list)
+            .build();
           list.addEntry(entry);
         } else {
           entry.setDisplayName(Component.text(current.getUsername()));
