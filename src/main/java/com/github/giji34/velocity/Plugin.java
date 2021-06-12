@@ -6,6 +6,7 @@ import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
@@ -16,31 +17,35 @@ import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
 import org.slf4j.Logger;
 
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.UUID;
+import java.io.*;
+import java.nio.file.Path;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "Giji34VelocityPlugin", version = "1.0", description = "A velocity plugin for giji34", authors = { "kbinani" })
+@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "Giji34VelocityPlugin", version = "1.1", description = "A velocity plugin for giji34", authors = { "kbinani" })
 public class Plugin {
   private final ProxyServer server;
   private final Logger logger;
-  private final HashMap<UUID, String> previousServer = new HashMap<UUID, String>();
+  private final HashMap<UUID, String> previousServer = new HashMap<>();
+  private final @DataDirectory Path configPaths;
+  private final HashSet<UUID> members = new HashSet<>();
 
   @Inject
-  public Plugin(ProxyServer server, Logger logger) {
+  public Plugin(ProxyServer server, Logger logger, @DataDirectory Path configPaths) {
     this.server = server;
     this.logger = logger;
-    logger.info("Loading giji34_velocity_plugin");
+    this.configPaths = configPaths;
   }
 
   @Subscribe
   public void onLeave(DisconnectEvent event) {
     Player left = event.getPlayer();
     Optional<ServerConnection> connection = left.getCurrentServer();
-    if (connection.isPresent()) {
+    UUID uuid = left.getUniqueId();
+    if (connection.isPresent() && this.members.contains(uuid)) {
       String name = connection.get().getServerInfo().getName();
-      previousServer.put(left.getUniqueId(), name);
+      previousServer.put(uuid, name);
+      this.savePreviousServer();
     }
     for (Player player : server.getAllPlayers()) {
       if (player.getUniqueId().equals(left.getUniqueId())) {
@@ -53,6 +58,7 @@ public class Plugin {
 
   @Subscribe
   public void onProxyInitialize(ProxyInitializeEvent event) {
+    this.loadConfig();
     server
       .getScheduler()
       .buildTask(this, this::updateTabList)
@@ -83,6 +89,9 @@ public class Plugin {
   public void onPlayerChooseInitialServerEvent(PlayerChooseInitialServerEvent e) {
     Player player = e.getPlayer();
     UUID uuid = player.getUniqueId();
+    if (!this.members.contains(uuid)) {
+      return;
+    }
     if (!this.previousServer.containsKey(uuid)) {
       return;
     }
@@ -152,5 +161,116 @@ public class Plugin {
     String nameA = serverA.get().getServerInfo().getName();
     String nameB = serverB.get().getServerInfo().getName();
     return nameA.equals(nameB);
+  }
+
+  private void loadConfig() {
+    try {
+      ArrayList<UUID> loaded = new ArrayList<>();
+      File members = new File(this.configPaths.toFile(), "members.tsv");
+      BufferedReader br = new BufferedReader(new FileReader(members));
+      String line;
+      while ((line = br.readLine()) != null) {
+        String[] columns = line.split("\t");
+        if (columns.length < 1) {
+          continue;
+        }
+        Optional<UUID> uuid = UuidFromString(columns[0]);
+        if (!uuid.isPresent()) {
+          continue;
+        }
+        loaded.add(uuid.get());
+      }
+      this.members.clear();
+      this.members.addAll(loaded);
+    } catch (Exception e) {
+      this.logger.warn(e.getMessage());
+      e.printStackTrace();
+    }
+    this.loadPreviousServer();
+  }
+
+  private Optional<UUID> UuidFromString(String s) {
+    try {
+      return Optional.of(UUID.fromString(s));
+    } catch (Exception e) {
+      return Optional.empty();
+    }
+  }
+
+  private File getUserStatusFile() throws Exception {
+    return new File(this.configPaths.toFile(), "user_status.tsv");
+  }
+
+  private void loadPreviousServer() {
+    try {
+      File userStatus = this.getUserStatusFile();
+      BufferedReader br = new BufferedReader(new FileReader(userStatus));
+      String line;
+      while ((line = br.readLine()) != null) {
+        String[] columns = line.split("\t");
+        if (columns.length < 2) {
+          continue;
+        }
+        Optional<UUID> uuid = UuidFromString(columns[0]);
+        if (!uuid.isPresent()) {
+          continue;
+        }
+        if (!this.members.contains(uuid.get())) {
+          continue;
+        }
+        String name = columns[1];
+        this.previousServer.put(uuid.get(), name);
+      }
+    } catch( Exception e) {
+      this.logger.warn(e.getMessage());
+      e.printStackTrace();
+    }
+  }
+
+  private void savePreviousServer() {
+    FileWriter writer = null;
+    BufferedWriter br = null;
+    File tmp = null;
+    try {
+      tmp = File.createTempFile("velocity_giji34_plugin", "tsv");
+      writer = new FileWriter(tmp);
+      br = new BufferedWriter(writer);
+      for (UUID uuid : this.previousServer.keySet()) {
+        String name = this.previousServer.get(uuid);
+        br.write(uuid.toString() + "\t" + name);
+        br.newLine();
+      }
+    } catch (Exception e) {
+      this.logger.warn(e.getMessage());
+    }
+    if (br == null) {
+      return;
+    } else {
+      try {
+        br.close();
+      } catch (Exception e) {
+        this.logger.warn(e.getMessage());
+        return;
+      }
+      br = null;
+    }
+    if (writer == null) {
+      return;
+    } else {
+      try {
+        writer.close();
+      } catch (Exception e) {
+        this.logger.warn(e.getMessage());
+        return;
+      }
+      writer = null;
+    }
+    try {
+      File old = this.getUserStatusFile();
+      old.delete();
+      tmp.renameTo(old);
+    } catch (Exception e) {
+      this.logger.warn(e.getMessage());
+    }
   }
 }
