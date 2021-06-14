@@ -98,6 +98,10 @@ public class Main extends JavaPlugin implements Listener {
         if (greplace != null) {
             greplace.setTabCompleter(new BlockNameTabCompleter());
         }
+        PluginCommand gtree = getCommand("gtree");
+        if (gtree != null) {
+            gtree.setTabCompleter(new TreeTypeTabCompleter());
+        }
         PluginCommand guide = getCommand("guide");
         if (guide != null) {
             guide.setTabCompleter(new TeleportLandmarkTabCompleter(teleportCommand, 1));
@@ -155,6 +159,8 @@ public class Main extends JavaPlugin implements Listener {
                 return editCommand.undo(player);
             case "gregenerate":
                 return editCommand.regenerate(player, args);
+            case "gtree":
+                return editCommand.tree(player, args);
             case "guide":
                 return teleportCommand.guide(player, this.borders, args);
             case "follow":
