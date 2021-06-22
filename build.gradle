@@ -26,11 +26,11 @@ dependencies {
 }
 
 wrapper {
-    gradleVersion = '6.8.2'
 }
 
 processResources {
     from(sourceSets.main.resources.srcDirs) {
         filter ReplaceTokens, tokens: [version: version]
     }
+    gradleVersion = '7.1'
 }
