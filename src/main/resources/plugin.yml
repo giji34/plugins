@@ -1,6 +1,6 @@
 name: giji34
 api-version: 1.13
-version: @version@
+version: 0.26.0
 main: com.github.giji34.t.Main
 commands:
   tpl:

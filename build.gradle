@@ -1,9 +1,7 @@
-import org.apache.tools.ant.filters.ReplaceTokens
-
 apply plugin: 'java'
 
 group = 'com.github.giji34'
-version = '0.25.1'
+version = '0.26.0'
 
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
@@ -26,11 +24,5 @@ dependencies {
 }
 
 wrapper {
-}
-
-processResources {
-    from(sourceSets.main.resources.srcDirs) {
-        filter ReplaceTokens, tokens: [version: version]
-    }
     gradleVersion = '7.1'
 }
