@@ -455,13 +455,6 @@ public class Main extends JavaPlugin implements Listener {
             player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
         } else {
             Server server = player.getServer();
-            for (World world : server.getWorlds()) {
-                if (world.getEnvironment() == World.Environment.NORMAL) {
-                    Location loc = world.getSpawnLocation();
-                    player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
-                    break;
-                }
-            }
             server.getScheduler().runTaskLater(this, () -> {
                 PlayerInventory inventory = player.getInventory();
                 boolean hasDiamondSword = false;
