@@ -534,14 +534,11 @@ public class Main extends JavaPlugin implements Listener {
         int amplifier = 0;
         boolean ambient = false;
         boolean particles = false;
-        PotionEffect nightVision = new PotionEffect(PotionEffectType.NIGHT_VISION, duration, amplifier, ambient, particles);
-        PotionEffect saturation = new PotionEffect(PotionEffectType.SATURATION, duration, amplifier, ambient, particles);
-        PotionEffect instantHealth = new PotionEffect(PotionEffectType.HEAL, duration, amplifier, ambient, particles);
-        PotionEffect waterBreathing = new PotionEffect(PotionEffectType.WATER_BREATHING, duration, amplifier, ambient, particles);
-        effects.add(nightVision);
-        effects.add(saturation);
-        effects.add(instantHealth);
-        effects.add(waterBreathing);
+        player.removePotionEffect(PotionEffectType.NIGHT_VISION); //夏祭り用: 後で戻す
+        //effects.add(new PotionEffect(PotionEffectType.NIGHT_VISION, duration, amplifier, ambient, particles)); //夏祭り用: 後で戻す
+        effects.add(new PotionEffect(PotionEffectType.SATURATION, duration, amplifier, ambient, particles));
+        effects.add(new PotionEffect(PotionEffectType.HEAL, duration, amplifier, ambient, particles));
+        effects.add(new PotionEffect(PotionEffectType.WATER_BREATHING, duration, amplifier, ambient, particles));
         if (!player.addPotionEffects(effects)) {
             getLogger().warning("failed adding portion effects for player: " + player.getName());
         }
