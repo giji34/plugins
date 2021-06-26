@@ -501,7 +501,7 @@ public class Main extends JavaPlugin implements Listener {
                         if (!rails.isEmpty()) {
                             String category = i < 9 ? "hotbar" : "inventory";
                             int offset = i < 9 ? 0 : 9;
-                            String command = "replaceitem entity " + player.getUniqueId() + " " + category + "." + (i - offset) + " " + ItemStringMinecart(rails);
+                            String command = "item replace entity " + player.getUniqueId() + " " + category + "." + (i - offset) + " with " + ItemStringMinecart(rails);
                             server.dispatchCommand(console, command);
                         }
                     }
@@ -509,7 +509,7 @@ public class Main extends JavaPlugin implements Listener {
                     if (offHand.getType() == Material.MINECART) {
                         List<String> rails = GetMissingRails(offHand);
                         if (!rails.isEmpty()) {
-                            String command = "replaceitem entity " + player.getUniqueId() + " weapon.offhand " + ItemStringMinecart(rails);
+                            String command = "item replace entity " + player.getUniqueId() + " weapon.offhand with " + ItemStringMinecart(rails);
                             server.dispatchCommand(console, command);
                         }
                     }
