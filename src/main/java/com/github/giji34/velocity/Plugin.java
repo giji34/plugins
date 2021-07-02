@@ -204,6 +204,9 @@ public class Plugin {
   private void loadPreviousServer() {
     try {
       File userStatus = this.getUserStatusFile();
+      if (!userStatus.exists()) {
+        return;
+      }
       BufferedReader br = new BufferedReader(new FileReader(userStatus));
       String line;
       while ((line = br.readLine()) != null) {
