@@ -22,7 +22,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1", description = "A velocity plugin for giji34", authors = { "kbinani" })
+@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1.1", description = "A velocity plugin for giji34", authors = { "kbinani" })
 public class Plugin {
   private final ProxyServer server;
   private final Logger logger;
@@ -230,13 +230,35 @@ public class Plugin {
     }
   }
 
+  private void unsafeBackupPreviousServer() throws Exception {
+    File existing = this.getUserStatusFile();
+    if (!existing.exists()) {
+      return;
+    }
+    File backup = new File(this.getUserStatusFile().getParentFile(), "user_status.tsv.backup");
+    if (backup.exists()) {
+      if (!backup.delete()) {
+        this.logger.warn("Cannot delete " + backup.getAbsolutePath());
+        return;
+      }
+    }
+    if (!existing.renameTo(backup)) {
+      this.logger.warn("renameTo failed: \"" + existing.getAbsolutePath() + "\" -> \"" + backup.getAbsolutePath() + "\"");
+    }
+  }
+
   private void savePreviousServer() {
+    try {
+      this.unsafeBackupPreviousServer();
+    } catch (Exception e) {
+      this.logger.warn(e.getMessage());
+    }
+
     FileWriter writer = null;
     BufferedWriter br = null;
-    File tmp = null;
     try {
-      tmp = File.createTempFile("giji34_velocity_plugin", "tsv");
-      writer = new FileWriter(tmp);
+      File file = this.getUserStatusFile();
+      writer = new FileWriter(file);
       br = new BufferedWriter(writer);
       for (UUID uuid : this.previousServer.keySet()) {
         String name = this.previousServer.get(uuid);
@@ -245,35 +267,21 @@ public class Plugin {
       }
     } catch (Exception e) {
       this.logger.warn(e.getMessage());
-    }
-    if (br == null) {
-      return;
-    } else {
-      try {
-        br.close();
-      } catch (Exception e) {
-        this.logger.warn(e.getMessage());
-        return;
+    } finally {
+      if (br != null) {
+        try {
+          br.close();
+        } catch (Exception e) {
+          this.logger.warn(e.getMessage());
+        }
       }
-      br = null;
-    }
-    if (writer == null) {
-      return;
-    } else {
-      try {
-        writer.close();
-      } catch (Exception e) {
-        this.logger.warn(e.getMessage());
-        return;
+      if (writer != null) {
+        try {
+          writer.close();
+        } catch (Exception e) {
+          this.logger.warn(e.getMessage());
+        }
       }
-      writer = null;
-    }
-    try {
-      File old = this.getUserStatusFile();
-      old.delete();
-      tmp.renameTo(old);
-    } catch (Exception e) {
-      this.logger.warn(e.getMessage());
     }
   }
 }
