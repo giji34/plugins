@@ -22,7 +22,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "Giji34VelocityPlugin", version = "1.1", description = "A velocity plugin for giji34", authors = { "kbinani" })
+@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1", description = "A velocity plugin for giji34", authors = { "kbinani" })
 public class Plugin {
   private final ProxyServer server;
   private final Logger logger;
@@ -232,7 +232,7 @@ public class Plugin {
     BufferedWriter br = null;
     File tmp = null;
     try {
-      tmp = File.createTempFile("velocity_giji34_plugin", "tsv");
+      tmp = File.createTempFile("giji34_velocity_plugin", "tsv");
       writer = new FileWriter(tmp);
       br = new BufferedWriter(writer);
       for (UUID uuid : this.previousServer.keySet()) {
