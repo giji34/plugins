@@ -3,6 +3,7 @@ package com.github.giji34.velocity;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
+import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
@@ -22,12 +23,13 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1.1", description = "A velocity plugin for giji34", authors = { "kbinani" })
+@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1.2", description = "A velocity plugin for giji34", authors = { "kbinani" })
 public class Plugin {
   private final ProxyServer server;
   private final Logger logger;
   private final HashMap<UUID, String> previousServer = new HashMap<>();
-  private final @DataDirectory Path configPaths;
+  private final @DataDirectory
+  Path configPaths;
   private final HashSet<UUID> members = new HashSet<>();
 
   @Inject
@@ -108,6 +110,15 @@ public class Plugin {
       return;
     }
     e.setInitialServer(found.get());
+  }
+
+  @Subscribe
+  public void onKickedFromServer(KickedFromServerEvent e) {
+    KickedFromServerEvent.ServerKickResult result = e.getResult();
+    if (!(result instanceof KickedFromServerEvent.DisconnectPlayer)) {
+      KickedFromServerEvent.DisconnectPlayer disconnect = KickedFromServerEvent.DisconnectPlayer.create(Component.empty());
+      e.setResult(disconnect);
+    }
   }
 
   private void updateTabList() {
@@ -224,7 +235,7 @@ public class Plugin {
         String name = columns[1];
         this.previousServer.put(uuid.get(), name);
       }
-    } catch( Exception e) {
+    } catch (Exception e) {
       this.logger.warn(e.getMessage());
       e.printStackTrace();
     }
