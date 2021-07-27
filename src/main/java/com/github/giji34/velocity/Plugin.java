@@ -23,7 +23,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1.2", description = "A velocity plugin for giji34", authors = { "kbinani" })
+@com.velocitypowered.api.plugin.Plugin(id = "giji34_velocity_plugin", name = "giji34-velocity-plugin", version = "1.1.3", description = "A velocity plugin for giji34", authors = { "kbinani" })
 public class Plugin {
   private final ProxyServer server;
   private final Logger logger;
@@ -116,7 +116,8 @@ public class Plugin {
   public void onKickedFromServer(KickedFromServerEvent e) {
     KickedFromServerEvent.ServerKickResult result = e.getResult();
     if (!(result instanceof KickedFromServerEvent.DisconnectPlayer)) {
-      KickedFromServerEvent.DisconnectPlayer disconnect = KickedFromServerEvent.DisconnectPlayer.create(Component.empty());
+      Component reason = e.getServerKickReason().orElseGet(Component::empty);
+      KickedFromServerEvent.DisconnectPlayer disconnect = KickedFromServerEvent.DisconnectPlayer.create(reason);
       e.setResult(disconnect);
     }
   }
