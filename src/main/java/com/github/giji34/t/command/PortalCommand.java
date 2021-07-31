@@ -16,10 +16,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.UUID;
+import java.util.*;
 
 class PortalCooldown {
     static final long kCooldownMilliSeconds = 5000;
@@ -108,7 +105,7 @@ public class PortalCommand {
         final ArrayList<Loc> blocks = new ArrayList<>();
         selection.forEach((Loc loc) -> {
             blocks.add(loc);
-            return true;
+            return Optional.empty();
         });
         final InterServerPortal portal = new InterServerPortal(name, worldUUID, blocks, returnLoc, destination);
         if (!portal.register(storage, player)) {
@@ -168,7 +165,7 @@ public class PortalCommand {
         final ArrayList<Loc> blocks = new ArrayList<>();
         selection.forEach((Loc loc) -> {
             blocks.add(loc);
-            return true;
+            return Optional.empty();
         });
         final IntraServerPortal portal = new IntraServerPortal(name, worldUUID, blocks, x, y, z, yaw);
         if (!portal.register(storage, player)) {

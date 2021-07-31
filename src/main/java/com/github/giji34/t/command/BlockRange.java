@@ -2,6 +2,7 @@ package com.github.giji34.t.command;
 
 import com.github.giji34.t.Loc;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 class BlockRange {
@@ -20,23 +21,28 @@ class BlockRange {
         return dx * dy * dz;
     }
 
-    boolean forEach(Function<Loc, Boolean> callback) {
+    Optional<String> forEach(Function<Loc, Optional<String>> callback) {
         int x0 = getMinX();
         int x1 = getMaxX();
         int y0 = getMinY();
         int y1 = getMaxY();
         int z0 = getMinZ();
         int z1 = getMaxZ();
-        for (int y = y0; y <= y1; y++) {
-            for (int z = z0; z <= z1; z++) {
-                for (int x = x0; x <= x1; x++) {
-                    if (!callback.apply(new Loc(x, y, z))) {
-                        return false;
+        try {
+            for (int y = y0; y <= y1; y++) {
+                for (int z = z0; z <= z1; z++) {
+                    for (int x = x0; x <= x1; x++) {
+                        Optional<String> err = callback.apply(new Loc(x, y, z));
+                        if (err.isPresent()) {
+                            return err;
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            return Optional.of(e.getMessage());
         }
-        return true;
+        return Optional.empty();
     }
 
     int getMinX() { return Math.min(start.x, end.x); }

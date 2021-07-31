@@ -24,6 +24,7 @@ import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -247,18 +248,17 @@ public class EditCommand {
             final Snapshot snapshot = finalSnapshotGetter.apply(0);
             server.getScheduler().runTask(owner, () -> {
                 ReplaceOperation operation = new ReplaceOperation(world);
-                final String error = snapshot.getErrorMessage();
-                if (error != null) {
-                    player.sendMessage(ChatColor.RED + error);
+                final String snapshotErrorMessage = snapshot.getErrorMessage();
+                if (snapshotErrorMessage != null) {
+                    player.sendMessage(ChatColor.RED + snapshotErrorMessage);
                     return;
                 }
 
                 final Snapshot s = snapshot;
-                final boolean ok = current.forEach(loc -> {
+                final Optional<String> error = current.forEach(loc -> {
                     BlockData bd = s.blockAt(loc, server);
                     if (bd == null) {
-                        player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
-                        return false;
+                        return Optional.of("指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
                     }
                     Block block = world.getBlockAt(loc.x, loc.y, loc.z);
                     String opBlock = null;
@@ -285,14 +285,14 @@ public class EditCommand {
                         }
                         operation.register(loc, new ReplaceData(opBlock, opBiome));
                     }
-                    return true;
+                    return Optional.empty();
                 });
-                if (ok) {
+                if (error.isPresent()) {
+                    player.sendMessage(ChatColor.RED + error.get());
+                } else {
                     ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
                     undoOperationRegistry.push(player, undo);
                     player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + finalInfo + "に戻しました");
-                } else {
-                    player.sendMessage(ChatColor.RED + "指定した範囲のブロック情報がまだありません");
                 }
             });
         });
@@ -494,7 +494,7 @@ public class EditCommand {
             if (predicate.apply(from)) {
                 operation.register(loc, new ReplaceData(data, null));
             }
-            return true;
+            return Optional.empty();
         });
         return operation;
     }
@@ -540,18 +540,18 @@ public class EditCommand {
         current.forEach((Loc loc) -> {
             Block block = world.getBlockAt(loc.x, loc.y, loc.z);
             if (block.getType() != Material.DIRT) {
-                return true;
+                return Optional.empty();
             }
             Block upper = world.getBlockAt(loc.x, loc.y + 1, loc.z);
             if (!upper.getType().isTransparent()) {
-                return true;
+                return Optional.empty();
             }
             if (upper.getType() == Material.SNOW) {
                 operation.register(loc, new ReplaceData(snowyGrassBlock, null));
             } else {
                 operation.register(loc, new ReplaceData(grassBlock, null));
             }
-            return true;
+            return Optional.empty();
         });
         if (operation.count() == 0) {
             return true;
