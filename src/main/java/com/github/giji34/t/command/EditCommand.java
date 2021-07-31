@@ -183,10 +183,6 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "undo する操作がまだ存在しません");
             return false;
         }
-        if (undo.count() > kMaxFillVolume) {
-            player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + undo.count() + " / " + kMaxFillVolume + " )");
-            return false;
-        }
         undo.apply(player.getServer(), player.getWorld(), false);
         return true;
     }
