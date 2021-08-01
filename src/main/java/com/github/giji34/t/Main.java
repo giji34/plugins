@@ -42,6 +42,7 @@ public class Main extends JavaPlugin implements Listener {
     private MobSpawnProhibiter mobSpawnProhibiter;
     private Borders borders;
     private final DynmapSupport dynmap = new DynmapSupport();
+    private final Hibernate hibernate;
 
     private static final int kPlayerIdleTimeoutMinutes = 10;
     private BukkitTask playerActivityWatchdog;
@@ -50,6 +51,7 @@ public class Main extends JavaPlugin implements Listener {
     private final DebugStick debugStick = new DebugStick();
 
     public Main() {
+        hibernate = new Hibernate(this);
     }
 
     @Override
@@ -122,20 +124,28 @@ public class Main extends JavaPlugin implements Listener {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
 
+        hibernate.enable();
+
         this.startPlayerActivityWatchdog();
         this.setupGameRules();
     }
 
     @Override
     public void onDisable() {
+        hibernate.disable();
         this.stopPlayerActivityWatchdog();
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (sender instanceof ConsoleCommandSender && label.equals("giji34")) {
-            this.handleAdminCommand(sender, args);
-            return true;
+        if (sender instanceof ConsoleCommandSender) {
+            switch (label) {
+                case "giji34":
+                    this.handleAdminCommand(sender, args);
+                    return true;
+                case "hibernate":
+                    return this.handleHibernate(sender, args);
+            }
         }
         if (!(sender instanceof Player)) {
             return false;
@@ -192,6 +202,8 @@ public class Main extends JavaPlugin implements Listener {
                 return this.handleAdminCommand(player, args);
             case "gclone":
                 return this.handleCloneCommand(player, args);
+            case "hibernate":
+                return this.handleHibernate(player, args);
             default:
                 return false;
         }
@@ -707,6 +719,30 @@ public class Main extends JavaPlugin implements Listener {
         if (this.playerActivityWatchdog != null) {
             getServer().getScheduler().cancelTask(this.playerActivityWatchdog.getTaskId());
             this.playerActivityWatchdog = null;
+        }
+    }
+
+    private boolean handleHibernate(CommandSender sender, String[] args) {
+        if (args.length != 1) {
+            return false;
+        }
+        String arg = args[0];
+        if (arg.equals("on")) {
+            if (hibernate.enable()) {
+                sender.sendMessage("hibernate を有効にしました");
+            } else {
+                sender.sendMessage(ChatColor.RED + "hibernate が既に有効です");
+            }
+            return true;
+        } else if (arg.equals("off")) {
+            if (hibernate.disable()) {
+                sender.sendMessage("hibernate を無効にしました");
+            } else {
+                sender.sendMessage("hibernate が既に無効です");
+            }
+            return true;
+        } else {
+            return false;
         }
     }
 }
