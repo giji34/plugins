@@ -1,6 +1,6 @@
 name: giji34
 api-version: 1.13
-version: 0.30.0
+version: 0.31.0
 main: com.github.giji34.t.Main
 commands:
   tpl:
@@ -33,3 +33,4 @@ commands:
   kusa:
   giji34:
   gclone:
+depend: [dynmap]

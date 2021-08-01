@@ -2,6 +2,7 @@ package com.github.giji34.t.command;
 
 import com.github.giji34.t.BiomeHelper;
 import com.github.giji34.t.BlockPropertyHelper;
+import com.github.giji34.t.DynmapSupport;
 import com.github.giji34.t.Loc;
 import org.bukkit.*;
 import org.bukkit.block.Biome;
@@ -39,6 +40,7 @@ public class EditCommand {
     private File pluginDirectory;
     private String snapshotServerHost;
     private int snapshotServerPort;
+    private final DynmapSupport dynmap;
 
     static {
         allMaterials = Arrays.stream(Material.values())
@@ -72,8 +74,9 @@ public class EditCommand {
         kTreeMaterials.add(Material.JUNGLE_LEAVES);
     }
 
-    public EditCommand(JavaPlugin owner) {
+    public EditCommand(JavaPlugin owner, DynmapSupport dynmap) {
         this.owner = owner;
+        this.dynmap = dynmap;
         selectedBlockRangeRegistry = new SelectedBlockRangeRegistry();
         undoOperationRegistry = new UndoOperationRegistry();
     }
@@ -136,7 +139,7 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
             return true;
         }
-        ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true);
+        ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true, this.dynmap);
         player.sendMessage(operation.count() + " 個の " + toBlockData.getAsString(true) + " ブロックを設置しました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -171,7 +174,7 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true);
+        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true, this.dynmap);
         player.sendMessage(op.count() + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -183,7 +186,7 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "undo する操作がまだ存在しません");
             return false;
         }
-        undo.apply(player.getServer(), player.getWorld(), false);
+        undo.apply(player.getServer(), player.getWorld(), false, this.dynmap);
         return true;
     }
 
@@ -286,7 +289,7 @@ public class EditCommand {
                 if (error.isPresent()) {
                     player.sendMessage(ChatColor.RED + error.get());
                 } else {
-                    ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
+                    ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false, this.dynmap);
                     undoOperationRegistry.push(player, undo);
                     player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + finalInfo + "に戻しました");
                 }
@@ -406,7 +409,7 @@ public class EditCommand {
             if (!ok) {
                 continue;
             }
-            ReplaceOperation undo = op.apply(player.getServer(), world, true);
+            ReplaceOperation undo = op.apply(player.getServer(), world, true, this.dynmap);
             undoOperationRegistry.push(player, undo);
             return true;
         }
@@ -444,7 +447,7 @@ public class EditCommand {
             player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
             return false;
         }
-        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true);
+        ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true, this.dynmap);
         player.sendMessage(op.count() + " 個のブロックを air に置き換えました");
         undoOperationRegistry.push(player, undo);
         return true;
@@ -552,7 +555,7 @@ public class EditCommand {
         if (operation.count() == 0) {
             return true;
         }
-        ReplaceOperation undo = operation.apply(server, world, true);
+        ReplaceOperation undo = operation.apply(server, world, true, this.dynmap);
         undoOperationRegistry.push(player, undo);
         return true;
     }

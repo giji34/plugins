@@ -1,7 +1,10 @@
 package com.github.giji34.t.command;
 
 import com.github.giji34.t.BiomeHelper;
+import com.github.giji34.t.BoundingBox;
+import com.github.giji34.t.DynmapSupport;
 import com.github.giji34.t.Loc;
+import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
@@ -22,11 +25,12 @@ public class ReplaceOperation {
     }
 
     @Nullable
-    ReplaceOperation apply(Server server, World world, boolean applyPhysics) {
+    ReplaceOperation apply(Server server, World world, boolean applyPhysics, DynmapSupport dynmap) {
         if (!worldUUID.equals(world.getUID())) {
             return null;
         }
         final ReplaceOperation undo = new ReplaceOperation(world);
+        final BoundingBox bb = new BoundingBox();
         ops.forEach((loc, data) -> {
             String beforeBiomeName = null;
             if (data.biome != null) {
@@ -35,6 +39,7 @@ public class ReplaceOperation {
                 if (afterBiome != beforeBiome) {
                     beforeBiomeName = beforeBiome.name();
                     world.setBiome(loc.x, loc.y, loc.z, afterBiome);
+                    bb.add(loc);
                 }
             }
 
@@ -47,6 +52,10 @@ public class ReplaceOperation {
             ReplaceData d = new ReplaceData(block.getBlockData().getAsString(true), beforeBiomeName);
             block.setBlockData(after, applyPhysics);
             undo.register(loc, d);
+            bb.add(loc);
+        });
+        bb.use((Loc min, Loc max) -> {
+            dynmap.triggerRender(new Location(world, min.x, min.y, min.z), new Location(world, max.x, max.y, max.z));
         });
         return undo;
     }

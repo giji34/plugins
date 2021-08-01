@@ -24,6 +24,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
+import org.dynmap.DynmapCommonAPIListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -35,11 +36,12 @@ import java.util.stream.Collectors;
 public class Main extends JavaPlugin implements Listener {
     private final ToggleGameModeCommand toggleGameModeCommand = new ToggleGameModeCommand();
     private final TeleportCommand teleportCommand = new TeleportCommand(this);
-    private final EditCommand editCommand = new EditCommand(this);
+    private EditCommand editCommand;
     private final PortalCommand portalCommand = new PortalCommand(this);
     private Permission permission;
     private MobSpawnProhibiter mobSpawnProhibiter;
     private Borders borders;
+    private final DynmapSupport dynmap = new DynmapSupport();
 
     private static final int kPlayerIdleTimeoutMinutes = 10;
     private BukkitTask playerActivityWatchdog;
@@ -52,11 +54,14 @@ public class Main extends JavaPlugin implements Listener {
 
     @Override
     public void onLoad() {
+        DynmapCommonAPIListener.register(this.dynmap);
+
         try {
             File jar = getFile();
             File pluginDirectory = new File(jar.getParent(), "giji34");
             this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
             this.teleportCommand.init(pluginDirectory);
+            this.editCommand = new EditCommand(this, this.dynmap);
             this.editCommand.init(pluginDirectory);
             this.portalCommand.init(pluginDirectory);
             this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
