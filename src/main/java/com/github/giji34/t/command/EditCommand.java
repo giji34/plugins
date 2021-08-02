@@ -11,10 +11,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -34,7 +30,6 @@ public class EditCommand {
     private static final int kMaxFillVolume = 4096;
     private static final HashSet<Material> kTreeMaterials = new HashSet<>();
     private final JavaPlugin owner;
-    private File pluginDirectory;
     private String snapshotServerHost;
     private int snapshotServerPort;
     private final DynmapSupport dynmap;
@@ -80,29 +75,9 @@ public class EditCommand {
         undoOperationRegistry = new UndoOperationRegistry();
     }
 
-    public void init(File pluginDirectory) {
-        this.pluginDirectory = pluginDirectory;
-        File config = new File(pluginDirectory, "config.properties");
-        try {
-            FileInputStream fis = new FileInputStream(config);
-            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] tokens = line.split("=");
-                if (tokens.length != 2) {
-                    continue;
-                }
-                String key = tokens[0];
-                String value = tokens[1];
-                if (key.equals("snapshotserver.host")) {
-                    this.snapshotServerHost = value;
-                } else if (key.equals("snapshotserver.port")) {
-                    this.snapshotServerPort = Integer.parseInt(value, 10);
-                }
-            }
-        } catch (Exception e) {
-            owner.getLogger().warning("config.properties がありません");
-        }
+    public void init(Config config) {
+        this.snapshotServerHost = config.snapshotServerHost;
+        this.snapshotServerPort = config.snapshotServerPort;
     }
 
     public boolean fill(Player player, String[] args) {
