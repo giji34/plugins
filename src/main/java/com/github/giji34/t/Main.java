@@ -43,6 +43,7 @@ public class Main extends JavaPlugin implements Listener {
     private Borders borders;
     private final DynmapSupport dynmap = new DynmapSupport();
     private final Hibernate hibernate;
+    private BlockStateMapping blockStateMapping;
 
     private static final int kPlayerIdleTimeoutMinutes = 10;
     private BukkitTask playerActivityWatchdog;
@@ -63,7 +64,8 @@ public class Main extends JavaPlugin implements Listener {
             File pluginDirectory = new File(jar.getParent(), "giji34");
             this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
             this.teleportCommand.init(pluginDirectory);
-            this.editCommand = new EditCommand(this, this.dynmap);
+            this.blockStateMapping = new BlockStateMapping(this);
+            this.editCommand = new EditCommand(this, this.dynmap, this.blockStateMapping);
             this.editCommand.init(pluginDirectory);
             this.portalCommand.init(pluginDirectory);
             this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);

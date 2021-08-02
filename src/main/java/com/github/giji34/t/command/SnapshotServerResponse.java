@@ -9,13 +9,18 @@ package com.github.giji34.t.command;
    },
    biome: {
      palette: string[],
-     indices: number[],
+     indices: number[]
+   },
+   version: {
+     palette: number[],
+     indices: number[]
    }
  }
  */
 
 public class SnapshotServerResponse {
     public String status;
-    public PaletteAndIndices block;
-    public PaletteAndIndices biome;
+    public StringPaletteAndIndices block;
+    public StringPaletteAndIndices biome;
+    public IntPaletteAndIndices version;
 }

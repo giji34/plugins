@@ -1,32 +1,35 @@
 package com.github.giji34.t.command;
 
 import com.github.giji34.t.Loc;
-import org.bukkit.Server;
-import org.bukkit.block.data.BlockData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 class MutableSnapshot implements Snapshot {
     final BlockRange range;
     @Nullable String errorMessage;
     final String[] blockData;
     final String[] biomes;
+    final int[] versions;
 
     MutableSnapshot(BlockRange range) {
         this.range = range;
         this.blockData = new String[range.volume()];
         this.biomes = new String[range.volume()];
+        this.versions = new int[range.volume()];
     }
 
     void setErrorMessage(@NotNull String s) {
         this.errorMessage = s;
     }
 
-    void set(int x, int y, int z, @NotNull String blockData, @Nullable String biome) {
+    void set(int x, int y, int z, @NotNull String blockData, @Nullable String biome, int version) {
         final int idx = getIndex(x, y, z);
         if (0 <= idx && idx < this.blockData.length) {
             this.blockData[idx] = blockData;
             this.biomes[idx] = biome;
+            this.versions[idx] = version;
         }
     }
 
@@ -42,14 +45,10 @@ class MutableSnapshot implements Snapshot {
     }
 
     @Override
-    public @Nullable BlockData blockAt(Loc loc, Server server) {
+    public @Nullable String blockAt(Loc loc) {
         final int idx = getIndex(loc.x, loc.y, loc.z);
         if (0 <= idx && idx < this.blockData.length) {
-            final String bd = this.blockData[idx];
-            if (bd == null) {
-                return  null;
-            }
-            return server.createBlockData(bd);
+            return this.blockData[idx];
         } else {
             return null;
         }
@@ -62,6 +61,16 @@ class MutableSnapshot implements Snapshot {
             return this.biomes[idx];
         } else {
             return null;
+        }
+    }
+
+    @Override
+    public Optional<Integer> versionAt(Loc loc) {
+        final int idx = getIndex(loc.x, loc.y, loc.z);
+        if (0 <= idx && idx < this.versions.length) {
+            return Optional.of(this.versions[idx]);
+        } else {
+            return Optional.empty();
         }
     }
 

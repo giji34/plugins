@@ -1,7 +1,7 @@
 apply plugin: 'java'
 
 group = 'com.github.giji34'
-version = '0.32.0'
+version = '0.33.0'
 
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
@@ -19,12 +19,17 @@ repositories {
     maven {
         url = 'https://repo.mikeprimm.com/'
     }
+    maven {
+        name = 'viaversion-repo'
+        url = 'https://repo.viaversion.com/'
+    }
 }
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
     compileOnly 'org.jetbrains:annotations:16.0.2'
     compileOnly 'org.dynmap:dynmap-api:2.0'
+    compileOnly 'com.viaversion:viaversion-api:4.0.1'
 }
 
 wrapper {

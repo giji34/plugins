@@ -1,9 +1,6 @@
 package com.github.giji34.t.command;
 
-import com.github.giji34.t.BiomeHelper;
-import com.github.giji34.t.BlockPropertyHelper;
-import com.github.giji34.t.DynmapSupport;
-import com.github.giji34.t.Loc;
+import com.github.giji34.t.*;
 import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
@@ -41,6 +38,7 @@ public class EditCommand {
     private String snapshotServerHost;
     private int snapshotServerPort;
     private final DynmapSupport dynmap;
+    private final BlockStateMapping mapping;
 
     static {
         allMaterials = Arrays.stream(Material.values())
@@ -74,9 +72,10 @@ public class EditCommand {
         kTreeMaterials.add(Material.JUNGLE_LEAVES);
     }
 
-    public EditCommand(JavaPlugin owner, DynmapSupport dynmap) {
+    public EditCommand(JavaPlugin owner, DynmapSupport dynmap, BlockStateMapping mapping) {
         this.owner = owner;
         this.dynmap = dynmap;
+        this.mapping = mapping;
         selectedBlockRangeRegistry = new SelectedBlockRangeRegistry();
         undoOperationRegistry = new UndoOperationRegistry();
     }
@@ -255,14 +254,21 @@ public class EditCommand {
 
                 final Snapshot s = snapshot;
                 final Optional<String> error = current.forEach(loc -> {
-                    BlockData bd = s.blockAt(loc, server);
+                    String bd = s.blockAt(loc);
                     if (bd == null) {
                         return Optional.of("指定した範囲のブロック情報がまだありません (" + loc.toString() + ")");
                     }
+                    Optional<Integer> chunkDataVersion = s.versionAt(loc);
+                    if (chunkDataVersion.isPresent()) {
+                        GameVersion version = GameVersion.fromChunkDataVersion(chunkDataVersion.get());
+                        bd = this.mapping.migrate(bd, version);
+                    }
+                    BlockData blockData = server.createBlockData(bd);
+
                     Block block = world.getBlockAt(loc.x, loc.y, loc.z);
                     String opBlock = null;
-                    if (!block.getBlockData().matches(bd)) {
-                        opBlock = bd.getAsString();
+                    if (!block.getBlockData().matches(blockData)) {
+                        opBlock = blockData.getAsString();
                     }
                     String opBiome = null;
                     String biome = s.biomeAt(loc);

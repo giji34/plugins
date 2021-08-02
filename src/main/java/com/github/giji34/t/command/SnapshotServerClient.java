@@ -95,7 +95,8 @@ class SnapshotServerClient {
                 for (int x = range.getMinX(); x <= range.getMaxX(); x++) {
                     final String blockData = response.block.palette[response.block.indices[idx]];
                     final String biome = response.biome.palette[response.biome.indices[idx]];
-                    snapshot.set(x, y, z, ResolveNamespacedId(blockData), ResolveNamespacedId(biome));
+                    final int version = response.version.palette[response.version.indices[idx]];
+                    snapshot.set(x, y, z, ResolveNamespacedId(blockData), ResolveNamespacedId(biome), version);
                     idx++;
                 }
             }
