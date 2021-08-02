@@ -18,8 +18,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -394,9 +392,7 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private boolean isSightseeingServer() {
-        Server server = getServer();
-        Plugin hibernate = server.getPluginManager().getPlugin("Hibernate");
-        return hibernate == null;
+        return config.isSightSeeing;
     }
 
     private void updatePlayerActivity(Player player) {
@@ -682,11 +678,10 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private void setupGameRules() {
-        Server server = this.getServer();
-        PluginManager manager = server.getPluginManager();
-        if (manager.getPlugin("RandomCoords2") == null) {
+        if (!isSightseeingServer()) {
             return;
         }
+        Server server = this.getServer();
         for (World world : server.getWorlds()) {
             world.setGameRule(GameRule.DISABLE_RAIDS, true);
             world.setGameRule(GameRule.DO_INSOMNIA, false);

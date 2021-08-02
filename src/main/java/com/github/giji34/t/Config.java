@@ -9,16 +9,19 @@ import java.util.logging.Logger;
 public class Config {
     public final String snapshotServerHost;
     public final int snapshotServerPort;
+    public final boolean isSightSeeing;
 
-    private Config(String snapshotServerHost, int snapshotServerPort) {
+    private Config(String snapshotServerHost, int snapshotServerPort, boolean isSightSeeing) {
         this.snapshotServerHost = snapshotServerHost;
         this.snapshotServerPort = snapshotServerPort;
+        this.isSightSeeing = isSightSeeing;
     }
 
     static Config Load(Logger logger, File pluginDirectory) {
         File config = new File(pluginDirectory, "config.properties");
         String snapshotServerHost = "";
         int snapshotServerPort = 0;
+        boolean sightseeing = true;
         try {
             FileInputStream fis = new FileInputStream(config);
             BufferedReader br = new BufferedReader(new InputStreamReader(fis));
@@ -34,11 +37,13 @@ public class Config {
                     snapshotServerHost = value;
                 } else if (key.equals("snapshotserver.port")) {
                     snapshotServerPort = Integer.parseInt(value, 10);
+                } else if (key.equals("sightseeing")) {
+                    sightseeing = !value.equals("false");
                 }
             }
         } catch (Exception e) {
             logger.warning("config.properties がありません");
         }
-        return new Config(snapshotServerHost, snapshotServerPort);
+        return new Config(snapshotServerHost, snapshotServerPort, sightseeing);
     }
 }
