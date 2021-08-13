@@ -11,9 +11,11 @@ public class Hibernate {
     private final JavaPlugin owner;
     private final long delayMillis = 1000L;
     private int taskId = -1;
+    private final DynmapSupport dynmap;
 
-    public Hibernate(JavaPlugin owner) {
+    public Hibernate(JavaPlugin owner, DynmapSupport dynmap) {
         this.owner = owner;
+        this.dynmap = dynmap;
     }
 
     public boolean enable() {
@@ -46,6 +48,9 @@ public class Hibernate {
         int numUnloaded = 0;
         while (iterator.hasNext()) {
             World world = (World) iterator.next();
+            if (dynmap.isRenderJobActive(world.getName())) {
+                continue;
+            }
             Chunk[] chunks = world.getLoadedChunks();
             for (Chunk chunk : chunks) {
                 if (chunk.unload(true)) {

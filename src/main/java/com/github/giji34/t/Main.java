@@ -42,7 +42,7 @@ public class Main extends JavaPlugin implements Listener {
     private MobSpawnProhibiter mobSpawnProhibiter;
     private Borders borders;
     private final DynmapSupport dynmap = new DynmapSupport();
-    private final Hibernate hibernate;
+    private Hibernate hibernate;
     private BlockStateMapping blockStateMapping;
     private final Config config;
 
@@ -57,7 +57,6 @@ public class Main extends JavaPlugin implements Listener {
         File pluginDirectory = new File(jar.getParent(), "giji34");
 
         config = Config.Load(getLogger(), pluginDirectory);
-        hibernate = new Hibernate(this);
     }
 
     @Override
@@ -75,6 +74,7 @@ public class Main extends JavaPlugin implements Listener {
             this.portalCommand.init(pluginDirectory);
             this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
             this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
+            this.hibernate = new Hibernate(this, this.dynmap);
         } catch (Exception e) {
             getLogger().warning("error: " + e);
         }

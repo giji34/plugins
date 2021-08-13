@@ -1,0 +1,3 @@
+[submodule "ext/dynmap"]
+	path = ext/dynmap
+	url = https://github.com/giji34/dynmap.git

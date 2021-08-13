@@ -21,4 +21,8 @@ public class DynmapSupport extends DynmapCommonAPIListener {
         }
         this.api.triggerRenderOfVolume(min, max);
     }
+
+    public boolean isRenderJobActive(String worldName) {
+        return this.api.isRenderJobActive(worldName);
+    }
 }
