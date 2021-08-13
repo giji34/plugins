@@ -26,6 +26,8 @@ import org.dynmap.DynmapCommonAPIListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystems;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -289,7 +291,7 @@ public class Main extends JavaPlugin implements Listener {
             if (block == null) {
                 return;
             }
-            if (action ==  Action.LEFT_CLICK_BLOCK) {
+            if (action == Action.LEFT_CLICK_BLOCK) {
                 e.setCancelled(true);
                 this.debugStick.onInteractWithMainHand(player, block);
             } else if (action == Action.RIGHT_CLICK_BLOCK) {
@@ -463,6 +465,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         addPotionEffects(player);
+        notifyOp(player);
         this.playerActivity.put(player.getUniqueId(), LocalDateTime.now());
 
         if (this.permission.hasRole(player, "member")) {
@@ -609,7 +612,7 @@ public class Main extends JavaPlugin implements Listener {
         }
         Player player = null;
         if (sender instanceof Player) {
-            player = (Player)sender;
+            player = (Player) sender;
             if (!this.permission.hasRole(player, "admin")) {
                 return false;
             }
@@ -745,6 +748,43 @@ public class Main extends JavaPlugin implements Listener {
             return true;
         } else {
             return false;
+        }
+    }
+
+    private void notifyOp(Player player) {
+        if (!player.isOp()) {
+            return;
+        }
+        try {
+            unsafeNotifyOp(player);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void unsafeNotifyOp(Player player) throws Exception {
+        for (FileStore store : FileSystems.getDefault().getFileStores()) {
+            String str = store.toString();
+            String mountPoint = Arrays.stream(config.monitoringFilesystemMountPoints).filter((it) -> str.startsWith(it + " (")).findFirst().orElse(null);
+            if (mountPoint == null) {
+                continue;
+            }
+            long usable = store.getUsableSpace();
+            long total = store.getTotalSpace();
+            player.sendMessage(ChatColor.AQUA + mountPoint);
+            player.sendMessage("  " + StringFromBytes(usable) + " / " + StringFromBytes(total) + " (" + String.format("%.1f", 100.0 * usable / total) + "%)");
+        }
+    }
+
+    private static String StringFromBytes(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.1f KiB", (bytes / 1024.0));
+        } else if (bytes < 1024 * 1024 * 1024) {
+            return String.format("%.1f MiB", (bytes / (1024.0 * 1024.0)));
+        } else {
+            return String.format("%.1f GiB", (bytes / (1024.0 * 1024.0 * 1024.0)));
         }
     }
 }
