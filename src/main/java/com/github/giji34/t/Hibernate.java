@@ -23,12 +23,17 @@ public class Hibernate {
             return false;
         }
         this.taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(owner, () -> {
-            if (Bukkit.getServer().getOnlinePlayers().isEmpty()) {
-                try {
-                    Thread.sleep(delayMillis);
-                    unloadChunks();
-                } catch (Exception e) {
-                }
+            if (!Bukkit.getServer().getOnlinePlayers().isEmpty()) {
+                return;
+            }
+            if (Bukkit.getWorlds().stream().anyMatch(world -> dynmap.isRenderJobActive(world.getName()))) {
+                return;
+            }
+            try {
+                Thread.sleep(delayMillis);
+                unloadChunks();
+            } catch (Exception e) {
+                owner.getLogger().warning(e.getMessage());
             }
         }, 0L, 1L);
         return true;
@@ -48,9 +53,6 @@ public class Hibernate {
         int numUnloaded = 0;
         while (iterator.hasNext()) {
             World world = (World) iterator.next();
-            if (dynmap.isRenderJobActive(world.getName())) {
-                continue;
-            }
             Chunk[] chunks = world.getLoadedChunks();
             for (Chunk chunk : chunks) {
                 if (chunk.unload(true)) {
