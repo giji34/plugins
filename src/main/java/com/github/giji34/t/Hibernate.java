@@ -51,18 +51,21 @@ public class Hibernate {
     private void unloadChunks() {
         Iterator iterator = Bukkit.getWorlds().iterator();
         int numUnloaded = 0;
+        int numFailed = 0;
         while (iterator.hasNext()) {
             World world = (World) iterator.next();
             Chunk[] chunks = world.getLoadedChunks();
             for (Chunk chunk : chunks) {
                 if (chunk.unload(true)) {
                     numUnloaded++;
+                } else {
+                    numFailed++;
                 }
             }
         }
 
         if (numUnloaded > 0) {
-            owner.getLogger().info(String.format("[hibernate] Unloaded %d chunks", numUnloaded));
+            owner.getLogger().info(String.format("[hibernate] Unloaded %d chunks, %d chunks failed to unload", numUnloaded, numFailed));
             long before = Runtime.getRuntime().freeMemory();
             System.gc();
             long after = Runtime.getRuntime().freeMemory();
