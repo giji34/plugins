@@ -26,7 +26,7 @@ public class Hibernate {
             if (!Bukkit.getServer().getOnlinePlayers().isEmpty()) {
                 return;
             }
-            if (Bukkit.getWorlds().stream().anyMatch(world -> dynmap.isRenderJobActive(world.getName()))) {
+            if (Bukkit.getWorlds().stream().anyMatch(dynmap::isRenderJobActive)) {
                 return;
             }
             try {

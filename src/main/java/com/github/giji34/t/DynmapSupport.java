@@ -1,9 +1,11 @@
 package com.github.giji34.t;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.dynmap.DynmapAPI;
 import org.dynmap.DynmapCommonAPI;
 import org.dynmap.DynmapCommonAPIListener;
+import org.jetbrains.annotations.NotNull;
 
 public class DynmapSupport extends DynmapCommonAPIListener {
     private DynmapAPI api = null;
@@ -22,7 +24,12 @@ public class DynmapSupport extends DynmapCommonAPIListener {
         this.api.triggerRenderOfVolume(min, max);
     }
 
-    public boolean isRenderJobActive(String worldName) {
-        return this.api.isRenderJobActive(worldName);
+    public boolean isRenderJobActive(World world) {
+        String normalizedName = NormalizeWorldName(world.getName());
+        return this.api.isRenderJobActive(normalizedName);
+    }
+
+    private static String NormalizeWorldName(@NotNull String n) {
+        return n.replace('/', '-').replace('[', '_').replace(']', '_');
     }
 }
