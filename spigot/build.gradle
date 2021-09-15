@@ -28,10 +28,6 @@ repositories {
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
     compileOnly 'org.jetbrains:annotations:16.0.2'
-    compileOnly files('third_party/dynmap/target/dynmap-api-3.2-SNAPSHOT.jar')
+    compileOnly files('../third_party/dynmap/target/dynmap-api-3.2-SNAPSHOT.jar')
     compileOnly 'com.viaversion:viaversion-api:4.0.1'
-}
-
-wrapper {
-    gradleVersion = '7.1'
 }
