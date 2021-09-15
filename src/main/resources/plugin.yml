@@ -1,0 +1,37 @@
+name: giji34
+api-version: 1.13
+version: 0.35.0
+main: com.github.giji34.t.Main
+commands:
+  tpl:
+    uasge: giji34:tpl <X> <Y> <Z>
+  tpb:
+    usage: giji34:tpb <Name of Landmark>
+  gm:
+    usage: giji34:gm
+  gfill:
+  greplace:
+  gundo:
+  gregenerate:
+  gtree:
+    usage: gtree <幹の長さ>
+  guide:
+    usage: guide <Player> <Name of Landmark>
+  follow:
+    usage: follow <Player>
+  create_inter_server_portal:
+    usage: create_inter_server_portal <name> <destinationSserver> <returnX> <returnY> <returnZ> <yaw>
+  create_intra_server_portal:
+    usage: create_intra_server_portal <name> <destX> <destY> <destZ> <yaw>
+  delete_portal:
+    usage: delete_portal <name>
+  fell_trees:
+  /chunk:
+    usage: //chunk
+  uuid:
+  connect:
+  kusa:
+  giji34:
+  gclone:
+  hibernate:
+depend: [dynmap, ViaVersion]
