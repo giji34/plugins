@@ -1,16 +1,22 @@
 package com.github.giji34.velocity;
 
+import com.google.common.io.ByteArrayDataInput;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
+import com.velocitypowered.api.event.connection.PluginMessageEvent;
 import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.ConnectionRequestBuilder;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
+import com.velocitypowered.api.proxy.messages.ChannelIdentifier;
+import com.velocitypowered.api.proxy.messages.ChannelMessageSource;
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.proxy.player.TabList;
 import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
@@ -67,6 +73,7 @@ public class Plugin {
       .repeat(1, TimeUnit.SECONDS)
       .delay(1, TimeUnit.SECONDS)
       .schedule();
+    server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("giji34:portal_v0"));
   }
 
   @Subscribe
@@ -295,5 +302,39 @@ public class Plugin {
         }
       }
     }
+  }
+
+  @Subscribe
+  public void onPluginMessage(PluginMessageEvent event) {
+    String id = event.getIdentifier().getId();
+    if (id.equals("giji34:portal_v0")) {
+      try {
+        unsafeHandlePortalChannelV0(event);
+      } catch (Exception e) {
+        System.err.println(e.getMessage());
+      }
+    }
+  }
+
+  private void unsafeHandlePortalChannelV0(PluginMessageEvent e) throws Exception {
+    ByteArrayDataInput in = e.dataAsDataStream();
+    String command = in.readUTF();
+    if (!command.equals("connect")) {
+      return;
+    }
+    String destinationServerName = in.readUTF();
+
+    ChannelMessageSource source = e.getSource();
+    if (!(source instanceof ServerConnection)) {
+      return;
+    }
+    ServerConnection connection = (ServerConnection) source;
+    Player player = connection.getPlayer();
+    Optional<RegisteredServer> destination = server.getServer(destinationServerName);
+    if (!destination.isPresent()) {
+      return;
+    }
+    ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
+    builder.fireAndForget();
   }
 }

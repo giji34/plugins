@@ -128,7 +128,7 @@ public class Main extends JavaPlugin implements Listener {
     if (gclone != null) {
       gclone.setTabCompleter(new LookingAtTabCompleter());
     }
-    getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+    getServer().getMessenger().registerOutgoingPluginChannel(this, InterServerPortal.kPortalPluginChannel);
     getServer().getPluginManager().registerEvents(this, this);
 
     hibernate.enable();

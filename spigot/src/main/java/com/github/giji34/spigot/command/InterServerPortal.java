@@ -17,6 +17,8 @@ public class InterServerPortal extends Portal {
   public final @Nullable Location returnLoc;
   public final String destination;
 
+  public static final String kPortalPluginChannel = "giji34:portal_v0";
+
   InterServerPortal(String name, UUID worldUuid, List<Loc> blocks, @Nullable Location returnLoc, String destination) {
     super(name, worldUuid, blocks);
     this.returnLoc = returnLoc;
@@ -102,9 +104,9 @@ public class InterServerPortal extends Portal {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos);
-      dos.writeUTF("Connect");
+      dos.writeUTF("connect");
       dos.writeUTF(destination);
-      player.sendPluginMessage(source, "BungeeCord", baos.toByteArray());
+      player.sendPluginMessage(source, kPortalPluginChannel, baos.toByteArray());
       baos.close();
       dos.close();
     } catch (Exception e) {
