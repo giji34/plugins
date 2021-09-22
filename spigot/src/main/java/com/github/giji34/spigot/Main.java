@@ -687,9 +687,9 @@ public class Main extends JavaPlugin implements Listener {
     Server server = this.getServer();
     for (World world : server.getWorlds()) {
       world.setGameRule(GameRule.DISABLE_RAIDS, true);
-      world.setGameRule(GameRule.DO_INSOMNIA, false);
-      world.setGameRule(GameRule.DO_PATROL_SPAWNING, false);
-      world.setGameRule(GameRule.DO_TRADER_SPAWNING, false);
+      TrySetGameRule(world, "doInsomnia", false);
+      TrySetGameRule(world, "doPatrolSpawning", false);
+      TrySetGameRule(world, "doTraderSpawning", false);
       world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
       world.setThundering(false);
       world.setStorm(false);
@@ -698,6 +698,14 @@ public class Main extends JavaPlugin implements Listener {
     }
     server.setDefaultGameMode(GameMode.ADVENTURE);
     server.setIdleTimeout(0);
+  }
+
+  private static <T> void TrySetGameRule(World world, String gameRule, T value) {
+    GameRule<?> rule = GameRule.getByName(gameRule);
+    if (rule == null) {
+      return;
+    }
+    world.setGameRule((GameRule<T>) rule, value);
   }
 
   private void startPlayerActivityWatchdog() {
