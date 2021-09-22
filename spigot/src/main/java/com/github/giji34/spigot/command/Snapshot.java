@@ -7,9 +7,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 interface Snapshot {
-    @NotNull BlockRange getRange();
-    @Nullable String blockAt(Loc loc);
-    @Nullable String biomeAt(Loc loc);
-    Optional<Integer> versionAt(Loc loc);
-    @Nullable String getErrorMessage();
+  @NotNull BlockRange getRange();
+
+  @Nullable String blockAt(Loc loc);
+
+  @Nullable String biomeAt(Loc loc);
+
+  Optional<Integer> versionAt(Loc loc);
+
+  @Nullable String getErrorMessage();
 }

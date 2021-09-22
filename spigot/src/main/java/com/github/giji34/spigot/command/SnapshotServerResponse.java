@@ -19,8 +19,8 @@ package com.github.giji34.spigot.command;
  */
 
 public class SnapshotServerResponse {
-    public String status;
-    public StringPaletteAndIndices block;
-    public StringPaletteAndIndices biome;
-    public IntPaletteAndIndices version;
+  public String status;
+  public StringPaletteAndIndices block;
+  public StringPaletteAndIndices biome;
+  public IntPaletteAndIndices version;
 }

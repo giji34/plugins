@@ -11,21 +11,21 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class ItemStackHelper {
-    private static final Pattern kCanPlaceOnPattern = Pattern.compile("CanPlaceOn=\\[([^]]*)\\]");
+  private static final Pattern kCanPlaceOnPattern = Pattern.compile("CanPlaceOn=\\[([^]]*)\\]");
 
-    static List<String> GetCanPlaceOn(ItemStack itemStack) {
-        ArrayList<String> ret = new ArrayList<>();
-        if (itemStack == null) {
-            return ret;
-        }
-        ItemMeta meta = itemStack.getItemMeta();
-        // UNSPECIFIC_META:{meta-type=UNSPECIFIC, CanPlaceOn=[minecraft:powered_rail, minecraft:detector_rail, minecraft:activator_rail, minecraft:rail]}
-        String s = meta.toString();
-        Matcher m = kCanPlaceOnPattern.matcher(s);
-        if (!m.find()) {
-            return ret;
-        }
-        String canPlaceOn = m.group(1);
-        return Arrays.stream(canPlaceOn.split(",")).map(String::trim).collect(Collectors.toList());
+  static List<String> GetCanPlaceOn(ItemStack itemStack) {
+    ArrayList<String> ret = new ArrayList<>();
+    if (itemStack == null) {
+      return ret;
     }
+    ItemMeta meta = itemStack.getItemMeta();
+    // UNSPECIFIC_META:{meta-type=UNSPECIFIC, CanPlaceOn=[minecraft:powered_rail, minecraft:detector_rail, minecraft:activator_rail, minecraft:rail]}
+    String s = meta.toString();
+    Matcher m = kCanPlaceOnPattern.matcher(s);
+    if (!m.find()) {
+      return ret;
+    }
+    String canPlaceOn = m.group(1);
+    return Arrays.stream(canPlaceOn.split(",")).map(String::trim).collect(Collectors.toList());
+  }
 }
