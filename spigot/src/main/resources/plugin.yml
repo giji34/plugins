@@ -1,7 +1,7 @@
 name: giji34
 api-version: 1.13
 version: 0.35.0
-main: com.github.giji34.t.Main
+main: com.github.giji34.spigot.Main
 commands:
   tpl:
     uasge: giji34:tpl <X> <Y> <Z>
