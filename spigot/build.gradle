@@ -7,10 +7,3 @@ dependencies {
   compileOnly files('../third_party/dynmap/target/dynmap-api-3.2-SNAPSHOT.jar')
   compileOnly 'com.viaversion:viaversion-api:4.0.1'
 }
-
-
-jar.dependsOn(shadowJar)
-
-shadowJar {
-  archiveClassifier = 'all'
-}
