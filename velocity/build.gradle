@@ -14,5 +14,5 @@ processResources {
 }
 
 jar {
-  archiveBaseName = 'giji34-velocity-plugin'
+  setArchivesBaseName('giji34-velocity-plugin')
 }

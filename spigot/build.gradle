@@ -16,5 +16,5 @@ processResources {
 }
 
 jar {
-  archiveBaseName = 'giji34'
+  setArchivesBaseName('giji34')
 }
