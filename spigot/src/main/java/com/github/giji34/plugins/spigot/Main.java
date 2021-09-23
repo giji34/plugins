@@ -1,6 +1,9 @@
 package com.github.giji34.plugins.spigot;
 
 import com.github.giji34.plugins.spigot.command.*;
+import org.apache.catalina.Context;
+import org.apache.catalina.core.StandardContext;
+import org.apache.catalina.startup.Tomcat;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.*;
@@ -51,6 +54,8 @@ public class Main extends JavaPlugin implements Listener {
   private BukkitTask playerActivityWatchdog;
   private HashMap<UUID, LocalDateTime> playerActivity = new HashMap<>();
   private final PortalService portalService = new PortalService();
+
+  private Tomcat tomcat;
   private PortalServiceServlet portalServiceServlet;
 
   private final DebugStick debugStick = new DebugStick();
@@ -387,7 +392,7 @@ public class Main extends JavaPlugin implements Listener {
       return;
     }
     portalCommand.markPortalUsed(player, portal);
-    portal.apply(player, this);
+    portal.apply(player, this.config.rpcPort, this);
   }
 
   private void correctPlayerLocation(Player player) {
@@ -474,12 +479,6 @@ public class Main extends JavaPlugin implements Listener {
 
     if (this.permission.hasRole(player, "member")) {
       portalCommand.setAnyPortalCooldown(player);
-
-      Location loc = portalCommand.getPortalReturnLocation(player);
-      if (loc == null) {
-        return;
-      }
-      player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
     } else {
       Server server = player.getServer();
       server.getScheduler().runTaskLater(this, () -> {
@@ -567,22 +566,6 @@ public class Main extends JavaPlugin implements Listener {
   public void onPlayerQuit(PlayerQuitEvent event) {
     Player player = event.getPlayer();
     this.playerActivity.remove(player.getUniqueId());
-
-    Portal portal = portalCommand.getCoolingdownPortal(player);
-    if (portal == null) {
-      portalCommand.setPortalReturnLocation(player, null);
-    } else if (portal instanceof InterServerPortal) {
-      InterServerPortal interServerPortal = (InterServerPortal) portal;
-      Location returnLoc = interServerPortal.returnLoc;
-      if (returnLoc != null) {
-        Location loc = player.getLocation();
-        loc.setX(returnLoc.getX());
-        loc.setY(returnLoc.getY());
-        loc.setZ(returnLoc.getZ());
-        loc.setYaw(returnLoc.getYaw());
-        portalCommand.setPortalReturnLocation(player, loc);
-      }
-    }
     this.borders.forget(player);
     this.editCommand.forget(player);
     this.debugStick.forget(player);
@@ -801,12 +784,37 @@ public class Main extends JavaPlugin implements Listener {
   }
 
   private void startPortalService() {
-    PortalServiceServlet servlet = new PortalServiceServlet(this.portalService);
     try {
-      servlet.init();
-      portalServiceServlet = servlet;
-    } catch (Exception e) {
-      System.err.println(e.getMessage());
+      this.unsafeStartPortalService();
+    } catch (Throwable e) {
+      getLogger().warning(e.getMessage());
+    }
+  }
+
+  private void unsafeStartPortalService() throws Throwable {
+    PortalServiceServlet servlet = new PortalServiceServlet(this.portalService);
+    servlet.init();
+    this.portalServiceServlet = servlet;
+
+
+    Tomcat tomcat = new Tomcat();
+    tomcat.setPort(this.config.rpcPort);
+    Context ctx = tomcat.addWebapp("", "/tmp");
+    tomcat.addServlet("", "portal_service", servlet);
+    tomcat.start();
+    this.tomcat = tomcat;
+  }
+
+  private void stopPortalService() {
+    if (this.tomcat == null) {
+      return;
+    }
+    try {
+      this.tomcat.getServer().await();
+      this.tomcat.destroy();
+      this.tomcat = null;
+    } catch (Throwable e) {
+      getLogger().warning(e.getMessage());
     }
   }
 

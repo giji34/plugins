@@ -1,15 +1,18 @@
+.PHONY: all
+all: shared spigot velocity
+
 .PHONY: dynmap
 dynmap:
 	(cd third_party/dynmap && ./gradlew build)
 
 .PHONY: spigot
 spigot:
-	(cd spigot && ../gradlew build)
+	./gradlew :spigot:build
 
 .PHONY: velocity
 velocity:
-	(cd velocity && ../gradlew build)
+	./gradlew :velocity:build
 
 .PHONY: shared
 shared:
-	(cd shared && ../gradlew build)
+	./gradlew :shared:build

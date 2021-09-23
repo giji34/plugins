@@ -105,5 +105,5 @@ public abstract class Portal {
     return true;
   }
 
-  public abstract void apply(Player player, JavaPlugin source);
+  public abstract void apply(Player player, int rpcPort, JavaPlugin source);
 }

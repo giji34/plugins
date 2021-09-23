@@ -2,6 +2,7 @@
 version = '0.35.0'
 
 def jacksonVersion = '2.10.2'
+def tomcatVersion = '9.0.53';
 
 java {
   registerFeature('servletSupport') {
@@ -21,7 +22,13 @@ dependencies {
   implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
   implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
   implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+  implementation "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}"
+  implementation "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"
+  implementation "org.apache.tomcat:tomcat-jasper:${tomcatVersion}"
+  implementation "org.apache.tomcat:tomcat-jasper-el:${tomcatVersion}"
+  implementation "org.apache.tomcat:tomcat-jsp-api:${tomcatVersion}"
 }
+
 
 jar.dependsOn(shadowJar)
 
@@ -33,6 +40,11 @@ shadowJar {
     include(dependency("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"))
     include(dependency("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"))
     include(dependency("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"))
+    include(dependency("org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}"))
+    include(dependency("org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"))
+    include(dependency("org.apache.tomcat:tomcat-jasper:${tomcatVersion}"))
+    include(dependency("org.apache.tomcat:tomcat-jasper-el:${tomcatVersion}"))
+    include(dependency("org.apache.tomcat:tomcat-jsp-api:${tomcatVersion}"))
   }
   archiveClassifier = 'all'
 }

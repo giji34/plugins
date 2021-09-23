@@ -2,6 +2,7 @@ package com.github.giji34.plugins.spigot.command;
 
 import com.github.giji34.plugins.spigot.Loc;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -14,15 +15,17 @@ import java.util.List;
 import java.util.UUID;
 
 public class InterServerPortal extends Portal {
-  public final @Nullable Location returnLoc;
-  public final String destination;
+  public final String server;
+  public final int dimension;
+  public final Location location;
 
   public static final String kPortalPluginChannel = "giji34:portal_v0";
 
-  InterServerPortal(String name, UUID worldUuid, List<Loc> blocks, @Nullable Location returnLoc, String destination) {
+  InterServerPortal(String name, UUID worldUuid, List<Loc> blocks, String server, int dimension, Location location) {
     super(name, worldUuid, blocks);
-    this.returnLoc = returnLoc;
-    this.destination = destination;
+    this.server = server;
+    this.dimension = dimension;
+    this.location = location;
   }
 
   InterServerPortal(String name, UUID worldUuid, List<Loc> blocks, ConfigurationSection section) throws Exception {
@@ -35,41 +38,41 @@ public class InterServerPortal extends Portal {
     }
     final ConfigurationSection data = (ConfigurationSection) dataObj;
 
-    // destination
-    final Object destinationObj = data.get("destination");
-    if (!(destinationObj instanceof String)) {
-      throw new Exception("\"destination\" section does not exist");
+    // data/server
+    final Object serverObj = data.get("server");
+    if (!(serverObj instanceof String)) {
+      throw new Exception("\"server\" section does not exist");
     }
-    this.destination = (String) destinationObj;
+    this.server = (String) serverObj;
 
-    // return_loc
-    final Object returnLocObj = data.get("return_loc");
-    if (returnLocObj instanceof ConfigurationSection) {
-      ConfigurationSection returnLocSection = (ConfigurationSection) returnLocObj;
-      Object xObj = returnLocSection.get("x");
-      Object yObj = returnLocSection.get("y");
-      Object zObj = returnLocSection.get("z");
-      Object yawObj = returnLocSection.get("yaw");
-      if (!(xObj instanceof Number) || !(yObj instanceof Number) || !(zObj instanceof Number)) {
-        throw new Exception("return_loc must contain x, y, and z");
-      }
-      double x = ((Number) xObj).doubleValue();
-      double y = ((Number) yObj).doubleValue();
-      double z = ((Number) zObj).doubleValue();
-      if (xObj instanceof Integer) {
-        x += 0.5;
-      }
-      if (zObj instanceof Integer) {
-        z += 0.5;
-      }
-      float yaw = 0;
-      if (yawObj instanceof Number) {
-        yaw = ((Number) yawObj).floatValue();
-      }
-      this.returnLoc = new Location(null, x, y, z, yaw, 0);
-    } else {
-      this.returnLoc = null;
+    // data/dimension
+    final Object dimensionObj = data.get("dimension");
+    if (!(dimensionObj instanceof Number)) {
+      throw new Exception("\"dimension\" must be an integer");
     }
+    this.dimension = ((Number) dimensionObj).intValue();
+
+    // data/location
+    final Object locationObj = data.get("location");
+    if (!(locationObj instanceof ConfigurationSection)) {
+      throw new Exception("\"location\" section does not exists");
+    }
+    final ConfigurationSection locationSec = (ConfigurationSection) locationObj;
+    final Object xObj = locationSec.get("x");
+    final Object yObj = locationSec.get("y");
+    final Object zObj = locationSec.get("z");
+    final Object yawObj = locationSec.get("yaw");
+    if (!(xObj instanceof Number) || !(yObj instanceof Number) || !(zObj instanceof Number)) {
+      throw new Exception("\"location\" section must contains x, y, and z");
+    }
+    double x = ((Number) xObj).doubleValue();
+    double y = ((Number) yObj).doubleValue();
+    double z = ((Number) zObj).doubleValue();
+    float yaw = 0.0f;
+    if (yawObj instanceof Number) {
+      yaw = ((Number) yawObj).floatValue();
+    }
+    this.location = new Location(null, x, y, z, yaw, 0);
   }
 
   @Override
@@ -79,25 +82,42 @@ public class InterServerPortal extends Portal {
     br.newLine();
     br.write("  data:");
     br.newLine();
-    if (this.returnLoc != null) {
-      br.write("    return_loc:");
-      br.newLine();
-      br.write("      x: " + this.returnLoc.getX());
-      br.newLine();
-      br.write("      y: " + this.returnLoc.getY());
-      br.newLine();
-      br.write("      z: " + this.returnLoc.getZ());
-      br.newLine();
-      br.write("      yaw: " + this.returnLoc.getYaw());
-      br.newLine();
-    }
-    br.write("    destination: \"" + this.destination + "\"");
+    br.write("    server: " + this.server);
+    br.newLine();
+    br.write("    dimension: " + this.dimension);
+    br.newLine();
+    br.write("    location:");
+    br.newLine();
+    br.write("      x: " + this.location.getX());
+    br.newLine();
+    br.write("      y: " + this.location.getY());
+    br.newLine();
+    br.write("      z: " + this.location.getZ());
+    br.newLine();
+    br.write("      yaw: " + this.location.getYaw());
     br.newLine();
   }
 
   @Override
-  public void apply(Player player, JavaPlugin source) {
-    Connect(player, this.destination, source);
+  public void apply(Player player, int rpcPort, JavaPlugin source) {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      DataOutputStream dos = new DataOutputStream(baos);
+      dos.writeUTF("portal");
+      dos.writeUTF(this.server);
+      dos.writeInt(rpcPort);
+      dos.writeInt(this.dimension);
+      dos.writeDouble(this.location.getX());
+      dos.writeDouble(this.location.getY());
+      dos.writeDouble(this.location.getZ());
+      dos.writeFloat(this.location.getYaw());
+
+      player.sendPluginMessage(source, kPortalPluginChannel, baos.toByteArray());
+      baos.close();
+      dos.close();
+    } catch (Exception e) {
+      source.getLogger().warning("InterServerPortal.Connect; io error: e=" + e);
+    }
   }
 
   public static void Connect(Player player, String destination, JavaPlugin source) {
@@ -106,6 +126,7 @@ public class InterServerPortal extends Portal {
       DataOutputStream dos = new DataOutputStream(baos);
       dos.writeUTF("connect");
       dos.writeUTF(destination);
+
       player.sendPluginMessage(source, kPortalPluginChannel, baos.toByteArray());
       baos.close();
       dos.close();

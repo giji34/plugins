@@ -22,9 +22,11 @@ import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import org.slf4j.Logger;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
@@ -309,42 +311,67 @@ public class Plugin {
   public void onPluginMessage(PluginMessageEvent event) {
     String id = event.getIdentifier().getId();
     if (id.equals("giji34:portal_v0")) {
-      try {
-        unsafeHandlePortalChannelV0(event);
-      } catch (Throwable e) {
-        System.err.println(e.getMessage());
-      }
+      handlePortalChannelV0(event);
     }
   }
 
-  private void unsafeHandlePortalChannelV0(PluginMessageEvent e) throws Throwable {
+  private void handlePortalChannelV0(PluginMessageEvent e) {
     ByteArrayDataInput in = e.dataAsDataStream();
     String command = in.readUTF();
-    if (!command.equals("connect")) {
-      return;
-    }
-    String destinationServerName = in.readUTF();
-    String rpcUrl = in.readUTF();
-    int dimension = in.readInt();
-    double x = in.readDouble();
-    double y = in.readDouble();
-    double z = in.readDouble();
-
     ChannelMessageSource source = e.getSource();
     if (!(source instanceof ServerConnection)) {
       return;
     }
     ServerConnection connection = (ServerConnection) source;
+    try {
+      switch (command) {
+        case "portal": {
+          handlePortalChannelPortalCommandV0(connection, in);
+          break;
+        }
+        case "connect": {
+          handlePortalChannelConnectCommandV0(connection, in);
+          break;
+        }
+      }
+    } catch (Throwable t) {
+      connection.getPlayer().sendMessage(Component.text(t.getMessage()).color(TextColor.color(255, 0, 0)));
+    }
+  }
+
+  private void handlePortalChannelPortalCommandV0(ServerConnection connection, ByteArrayDataInput in) throws Throwable {
+    String destinationServerName = in.readUTF();
+    int rpcPort = in.readInt();
+    int dimension = in.readInt();
+    double x = in.readDouble();
+    double y = in.readDouble();
+    double z = in.readDouble();
+
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
     if (!destination.isPresent()) {
       return;
     }
 
-    JsonRpcHttpClient client = new JsonRpcHttpClient(new URL(rpcUrl));
+    InetAddress address = connection.getServerInfo().getAddress().getAddress();
+    String url = "http://" + address.getHostAddress() + ":" + rpcPort + "/portal_service";
+    System.out.println("url=" + url);
+
+    JsonRpcHttpClient client = new JsonRpcHttpClient(new URL(url));
     Boolean ok = client.invoke("reserveDestination", new Object[]{player.getUniqueId(), dimension, x, y, z}, Boolean.class);
     if (!ok) {
       player.sendMessage(Component.text("Failed to communicate destination server"), MessageType.SYSTEM);
+      return;
+    }
+    ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
+    builder.fireAndForget();
+  }
+
+  private void handlePortalChannelConnectCommandV0(ServerConnection connection, ByteArrayDataInput in) throws Throwable {
+    String destinationServerName = in.readUTF();
+    Player player = connection.getPlayer();
+    Optional<RegisteredServer> destination = server.getServer(destinationServerName);
+    if (!destination.isPresent()) {
       return;
     }
     ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());

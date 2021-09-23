@@ -12,12 +12,14 @@ public class Config {
   public final int snapshotServerPort;
   public final boolean isSightSeeing;
   public final String[] monitoringFilesystemMountPoints;
+  public final int rpcPort;
 
-  private Config(String snapshotServerHost, int snapshotServerPort, boolean isSightSeeing, String[] monitoringFilesystemMountPoints) {
+  private Config(String snapshotServerHost, int snapshotServerPort, boolean isSightSeeing, String[] monitoringFilesystemMountPoints, int rpcPort) {
     this.snapshotServerHost = snapshotServerHost;
     this.snapshotServerPort = snapshotServerPort;
     this.isSightSeeing = isSightSeeing;
     this.monitoringFilesystemMountPoints = monitoringFilesystemMountPoints;
+    this.rpcPort = rpcPort;
   }
 
   static Config Load(Logger logger, File pluginDirectory) {
@@ -26,6 +28,7 @@ public class Config {
     int snapshotServerPort = 0;
     boolean sightseeing = true;
     ArrayList<String> monitoringFilesystemMountPoints = new ArrayList<>();
+    int rpcPort = -1;
     try {
       FileInputStream fis = new FileInputStream(config);
       BufferedReader br = new BufferedReader(new InputStreamReader(fis));
@@ -45,11 +48,13 @@ public class Config {
           sightseeing = !value.equals("false");
         } else if (key.equals("fs.mountpoints[]")) {
           monitoringFilesystemMountPoints.add(value.trim());
+        } else if (key.equals("rpc.port")) {
+          rpcPort = Integer.parseInt(value, 10);
         }
       }
     } catch (Exception e) {
       logger.warning("config.properties がありません");
     }
-    return new Config(snapshotServerHost, snapshotServerPort, sightseeing, monitoringFilesystemMountPoints.toArray(new String[0]));
+    return new Config(snapshotServerHost, snapshotServerPort, sightseeing, monitoringFilesystemMountPoints.toArray(new String[0]), rpcPort);
   }
 }

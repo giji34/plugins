@@ -42,7 +42,6 @@ public class PortalCommand {
   public void init(File pluginDirectory) {
     this.pluginDirectory = pluginDirectory;
     this.loadConfig();
-    this.loadUserStatus();
   }
 
   public void reload() {
@@ -53,63 +52,71 @@ public class PortalCommand {
     return new File(pluginDirectory, "portals.yml");
   }
 
-  File getStatusFile() {
-    return new File(pluginDirectory, "user_status.yml");
-  }
-
   public boolean createInterServerPortal(Player player, String[] args, EditCommand editCommand) {
     BlockRange selection = editCommand.getCurrentSelection(player);
     if (selection == null) {
       player.sendMessage(ChatColor.RED + "ポータルにする範囲を木の斧で選択して下さい");
       return true;
     }
-    if (args.length != 2 && args.length != 6) {
+    if (args.length < 6) {
       return false;
     }
     String name = args[0];
     String destination = args[1];
-    boolean enableReturnLoc = args.length == 6;
-    Location returnLoc = null;
-    if (enableReturnLoc) {
-      String xStr = args[2];
-      String yStr = args[3];
-      String zStr = args[4];
-      String yawStr = args[5];
-      double x, y, z;
+    String dimensionString = args[2];
+    int dimension = 0;
+    switch (dimensionString) {
+      case "overworld":
+        dimension = 0;
+        break;
+      case "nether":
+        dimension = -1;
+        break;
+      case "end":
+        dimension = 1;
+        break;
+    }
+    Location location = null;
+    String xStr = args[3];
+    String yStr = args[4];
+    String zStr = args[5];
+    double x, y, z;
+    try {
+      x = Double.parseDouble(xStr);
+      y = Double.parseDouble(yStr);
+      z = Double.parseDouble(zStr);
+    } catch (Exception e) {
+      player.sendMessage(ChatColor.RED + "移動先地点の座標の書式が不正です");
+      return true;
+    }
+    try {
+      Integer.parseInt(xStr);
+      x += 0.5;
+    } catch (Exception e) {
+    }
+    try {
+      Integer.parseInt(zStr);
+      z += 0.5;
+    } catch (Exception e) {
+    }
+    float yaw = 0;
+    if (args.length >= 7) {
       try {
-        x = Double.parseDouble(xStr);
-        y = Double.parseDouble(yStr);
-        z = Double.parseDouble(zStr);
-      } catch (Exception e) {
-        player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
-        return true;
-      }
-      try {
-        Integer.parseInt(xStr);
-        x += 0.5;
-      } catch (Exception e) {
-      }
-      try {
-        Integer.parseInt(zStr);
-        z += 0.5;
-      } catch (Exception e) {
-      }
-      float yaw;
-      try {
+        String yawStr = args[6];
         yaw = Float.parseFloat(yawStr);
       } catch (Exception e) {
-        player.sendMessage(ChatColor.RED + "帰還地点の座標の書式が不正です");
+        player.sendMessage(ChatColor.RED + "移動先地点の座標の書式が不正です");
         return true;
       }
-      returnLoc = new Location(null, x, y, z, yaw, 0);
     }
+    location = new Location(null, x, y, z, yaw, 0);
     UUID worldUUID = player.getWorld().getUID();
     final ArrayList<Loc> blocks = new ArrayList<>();
     selection.forEach((Loc loc) -> {
       blocks.add(loc);
       return Optional.empty();
     });
-    final InterServerPortal portal = new InterServerPortal(name, worldUUID, blocks, returnLoc, destination);
+    final InterServerPortal portal = new InterServerPortal(name, worldUUID, blocks, destination, dimension, location);
     if (!portal.register(storage, player)) {
       return true;
     }
@@ -233,40 +240,6 @@ public class PortalCommand {
     Location loc = player.getLocation();
     Loc l = new Loc(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     return portals.get(l);
-  }
-
-  static String getLocationString(@Nullable Location loc) {
-    if (loc == null) {
-      return "null";
-    }
-    return "(" + loc.getWorld().getUID().toString() + ", " + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ() + ")";
-  }
-
-  final HashMap<String, Location> portalReturnLocation = new HashMap<>();
-
-  public void setPortalReturnLocation(Player player, @Nullable Location loc) {
-    if (loc == null) {
-      portalReturnLocation.remove(player.getName());
-    } else {
-      portalReturnLocation.put(player.getName(), loc);
-    }
-    try {
-      this.saveUserStatus();
-    } catch (Exception e) {
-      owner.getLogger().warning("user_status.yml の保存に失敗しました: e=" + e);
-    }
-  }
-
-  @Nullable
-  public Location getPortalReturnLocation(Player player) {
-    Location returnLocation = portalReturnLocation.get(player.getName());
-    if (returnLocation == null) {
-      return null;
-    }
-    if (!returnLocation.getWorld().getUID().equals(player.getWorld().getUID())) {
-      return null;
-    }
-    return returnLocation;
   }
 
   final HashMap<String, PortalCooldown> portalCooldown = new HashMap<>();
@@ -407,91 +380,5 @@ public class PortalCommand {
 
     File configFile = getConfigFile();
     Files.move(tmp.toPath(), configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-  }
-
-  private void loadUserStatus() {
-    /*
-    user1:
-      world_uuid: "6125BB4C-C988-4EEC-A9F4-68EE713478E1"
-      location:
-        x: 1.5
-        y: 2
-        z: 3.5
-        yaw: 180.0
-    */
-    File file = getStatusFile();
-    YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-    for (String name : config.getKeys(false)) {
-      Object userObj = config.get(name);
-      if (!(userObj instanceof ConfigurationSection)) {
-        continue;
-      }
-      ConfigurationSection userSec = (ConfigurationSection) userObj;
-      Object worldUUIDObj = userSec.get("world_uuid");
-      if (!(worldUUIDObj instanceof String)) {
-        continue;
-      }
-      UUID worldUUID = UUID.fromString((String) worldUUIDObj);
-      Object locationObj = userSec.get("location");
-      if (!(locationObj instanceof ConfigurationSection)) {
-        continue;
-      }
-      ConfigurationSection locationSec = (ConfigurationSection) locationObj;
-      Object xObj = locationSec.get("x");
-      Object yObj = locationSec.get("y");
-      Object zObj = locationSec.get("z");
-      Object yawObj = locationSec.get("yaw");
-
-      if (!(xObj instanceof Number) || !(yObj instanceof Number) || !(zObj instanceof Number)) {
-        continue;
-      }
-      double x = ((Number) xObj).doubleValue();
-      double y = ((Number) yObj).doubleValue();
-      double z = ((Number) zObj).doubleValue();
-
-      float yaw = 0;
-      if (yawObj instanceof Number) {
-        yaw = ((Number) yawObj).floatValue();
-      }
-
-      World world = owner.getServer().getWorld(worldUUID);
-      if (world == null) {
-        continue;
-      }
-      Location location = new Location(world, x, y, z, yaw, 0);
-      portalReturnLocation.put(name, location);
-      owner.getLogger().info("loaded: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ", " + yaw + ", " + "0)");
-    }
-  }
-
-  private void saveUserStatus() throws Exception {
-    File file = getStatusFile();
-    FileOutputStream fos = new FileOutputStream(file);
-    OutputStreamWriter osw = new OutputStreamWriter(fos);
-    BufferedWriter br = new BufferedWriter(osw);
-    for (String name : portalReturnLocation.keySet()) {
-      Location location = portalReturnLocation.get(name);
-      br.write(name + ":");
-      br.newLine();
-      UUID worldUUID = location.getWorld().getUID();
-      br.write("  world_uuid: \"" + worldUUID.toString() + "\"");
-      br.newLine();
-      br.write("  location:");
-      br.newLine();
-      double x = location.getX();
-      double y = location.getY();
-      double z = location.getZ();
-      float yaw = location.getYaw();
-      br.write("    x: " + x);
-      br.newLine();
-      br.write("    y: " + y);
-      br.newLine();
-      br.write("    z: " + z);
-      br.newLine();
-      br.write("    yaw: " + yaw);
-      br.newLine();
-      owner.getLogger().info("saved: portalReturnLocation[" + name + "] = (" + worldUUID.toString() + ", " + x + ", " + y + ", " + z + ", " + yaw + ", 0)");
-    }
-    br.close();
   }
 }

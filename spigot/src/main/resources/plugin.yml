@@ -20,7 +20,7 @@ commands:
   follow:
     usage: follow <Player>
   create_inter_server_portal:
-    usage: create_inter_server_portal <name> <destinationSserver> <returnX> <returnY> <returnZ> <yaw>
+    usage: create_inter_server_portal <name> <server> <dimension:(overworld|nether|end)> <x> <y> <z> <yaw>
   create_intra_server_portal:
     usage: create_intra_server_portal <name> <destX> <destY> <destZ> <yaw>
   delete_portal:

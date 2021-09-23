@@ -1,7 +1,6 @@
 package com.github.giji34.plugins.spigot.command;
 
 import com.googlecode.jsonrpc4j.JsonRpcServer;
-
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
