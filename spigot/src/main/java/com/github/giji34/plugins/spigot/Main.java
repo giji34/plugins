@@ -1,9 +1,6 @@
 package com.github.giji34.plugins.spigot;
 
 import com.github.giji34.plugins.spigot.command.*;
-import org.apache.catalina.Context;
-import org.apache.catalina.core.StandardContext;
-import org.apache.catalina.startup.Tomcat;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.*;
@@ -53,10 +50,7 @@ public class Main extends JavaPlugin implements Listener {
   private static final int kPlayerIdleTimeoutMinutes = 10;
   private BukkitTask playerActivityWatchdog;
   private HashMap<UUID, LocalDateTime> playerActivity = new HashMap<>();
-  private final PortalService portalService = new PortalService();
-
-  private Tomcat tomcat;
-  private PortalServiceServlet portalServiceServlet;
+  private PortalService portalService;
 
   private final DebugStick debugStick = new DebugStick();
 
@@ -83,6 +77,7 @@ public class Main extends JavaPlugin implements Listener {
       this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
       this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
       this.hibernate = new Hibernate(this, this.dynmap);
+      this.portalService = new PortalService(getLogger(), this.config.rpcPort);
     } catch (Exception e) {
       getLogger().warning("error: " + e);
     }
@@ -392,7 +387,7 @@ public class Main extends JavaPlugin implements Listener {
       return;
     }
     portalCommand.markPortalUsed(player, portal);
-    portal.apply(player, this.config.rpcPort, this);
+    portal.apply(player, this);
   }
 
   private void correctPlayerLocation(Player player) {
@@ -784,38 +779,7 @@ public class Main extends JavaPlugin implements Listener {
   }
 
   private void startPortalService() {
-    try {
-      this.unsafeStartPortalService();
-    } catch (Throwable e) {
-      getLogger().warning(e.getMessage());
-    }
-  }
-
-  private void unsafeStartPortalService() throws Throwable {
-    PortalServiceServlet servlet = new PortalServiceServlet(this.portalService);
-    servlet.init();
-    this.portalServiceServlet = servlet;
-
-
-    Tomcat tomcat = new Tomcat();
-    tomcat.setPort(this.config.rpcPort);
-    Context ctx = tomcat.addWebapp("", "/tmp");
-    tomcat.addServlet("", "portal_service", servlet);
-    tomcat.start();
-    this.tomcat = tomcat;
-  }
-
-  private void stopPortalService() {
-    if (this.tomcat == null) {
-      return;
-    }
-    try {
-      this.tomcat.getServer().await();
-      this.tomcat.destroy();
-      this.tomcat = null;
-    } catch (Throwable e) {
-      getLogger().warning(e.getMessage());
-    }
+    this.portalService.start();
   }
 
   @EventHandler
@@ -823,7 +787,7 @@ public class Main extends JavaPlugin implements Listener {
     Player player = e.getPlayer();
     UUID uuid = player.getUniqueId();
     Optional<ReservedSpawnLocation> maybeLocation = this.portalService.drainReservation(uuid);
-    if (!maybeLocation.isPresent()) {
+    if (maybeLocation.isEmpty()) {
       return;
     }
     ReservedSpawnLocation location = maybeLocation.get();
@@ -840,10 +804,10 @@ public class Main extends JavaPlugin implements Listener {
           return false;
       }
     }).findFirst();
-    if (!spawnWorld.isPresent()) {
+    if (spawnWorld.isEmpty()) {
       return;
     }
-    Location loc = new Location(spawnWorld.get(), location.x, location.y, location.z);
+    Location loc = new Location(spawnWorld.get(), location.x, location.y, location.z, location.yaw, 0);
     e.setSpawnLocation(loc);
   }
 }

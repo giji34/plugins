@@ -2,7 +2,6 @@ package com.github.giji34.plugins.velocity;
 
 import com.google.common.io.ByteArrayDataInput;
 import com.google.inject.Inject;
-import com.googlecode.jsonrpc4j.JsonRpcHttpClient;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
@@ -27,8 +26,12 @@ import org.slf4j.Logger;
 
 import java.io.*;
 import java.net.InetAddress;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +43,7 @@ public class Plugin {
   private final @DataDirectory
   Path configPaths;
   private final HashSet<UUID> members = new HashSet<>();
+  private Config config;
 
   @Inject
   public Plugin(ProxyServer server, Logger logger, @DataDirectory Path configPaths) {
@@ -69,7 +73,7 @@ public class Plugin {
 
   @Subscribe
   public void onProxyInitialize(ProxyInitializeEvent event) {
-    this.loadConfig();
+    this.loadConfigs();
     server
       .getScheduler()
       .buildTask(this, this::updateTabList)
@@ -109,14 +113,14 @@ public class Plugin {
     }
     String name = this.previousServer.get(uuid);
     Optional<RegisteredServer> original = e.getInitialServer();
-    if (!original.isPresent()) {
+    if (original.isEmpty()) {
       return;
     }
     if (original.get().getServerInfo().getName().equals(name)) {
       return;
     }
     Optional<RegisteredServer> found = server.getAllServers().stream().filter((server) -> server.getServerInfo().getName().equals(name)).findFirst();
-    if (!found.isPresent()) {
+    if (found.isEmpty()) {
       return;
     }
     e.setInitialServer(found.get());
@@ -185,7 +189,13 @@ public class Plugin {
     return nameA.equals(nameB);
   }
 
-  private void loadConfig() {
+  private void loadConfigs() {
+    this.loadMembers();
+    this.loadPreviousServer();
+    this.loadConfig();
+  }
+
+  private void loadMembers() {
     try {
       ArrayList<UUID> loaded = new ArrayList<>();
       File members = new File(this.configPaths.toFile(), "members.tsv");
@@ -208,7 +218,6 @@ public class Plugin {
       this.logger.warn(e.getMessage());
       e.printStackTrace();
     }
-    this.loadPreviousServer();
   }
 
   private Optional<UUID> UuidFromString(String s) {
@@ -307,6 +316,17 @@ public class Plugin {
     }
   }
 
+  private void loadConfig() {
+    Config config = new Config();
+    try {
+      File file = new File(this.configPaths.toFile(), "config.properties");
+      config.load(file);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    this.config = config;
+  }
+
   @Subscribe
   public void onPluginMessage(PluginMessageEvent event) {
     String id = event.getIdentifier().getId();
@@ -335,34 +355,64 @@ public class Plugin {
         }
       }
     } catch (Throwable t) {
-      connection.getPlayer().sendMessage(Component.text(t.getMessage()).color(TextColor.color(255, 0, 0)));
+      t.printStackTrace();
+      logger.warn(t.toString());
+      String message = t.getMessage();
+      if (message != null) {
+        connection.getPlayer().sendMessage(Component.text(message).color(TextColor.color(255, 0, 0)));
+      }
     }
   }
 
   private void handlePortalChannelPortalCommandV0(ServerConnection connection, ByteArrayDataInput in) throws Throwable {
     String destinationServerName = in.readUTF();
-    int rpcPort = in.readInt();
+    Optional<Integer> maybeRpcPort = this.config.getRpcPort(destinationServerName);
+    if (maybeRpcPort.isEmpty()) {
+      logger.warn("rpc port unknonw for server: " + destinationServerName);
+      return;
+    }
+    int rpcPort = maybeRpcPort.get();
     int dimension = in.readInt();
     double x = in.readDouble();
     double y = in.readDouble();
     double z = in.readDouble();
+    float yaw = in.readFloat();
 
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
-    if (!destination.isPresent()) {
+    if (destination.isEmpty()) {
       return;
     }
 
     InetAddress address = connection.getServerInfo().getAddress().getAddress();
-    String url = "http://" + address.getHostAddress() + ":" + rpcPort + "/portal_service";
-    System.out.println("url=" + url);
+    String url = "http://" + address.getHostAddress() + ":" + rpcPort + "/portal/reserve_spawn_location";
 
-    JsonRpcHttpClient client = new JsonRpcHttpClient(new URL(url));
-    Boolean ok = client.invoke("reserveDestination", new Object[]{player.getUniqueId(), dimension, x, y, z}, Boolean.class);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    dos.writeUTF(player.getUniqueId().toString());
+    dos.writeInt(dimension);
+    dos.writeDouble(x);
+    dos.writeDouble(y);
+    dos.writeDouble(z);
+    dos.writeFloat(yaw);
+
+    HttpClient client = HttpClient.newBuilder()
+      .version(HttpClient.Version.HTTP_1_1)
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .connectTimeout(Duration.ofSeconds(10))
+      .build();
+    HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(url))
+      .POST(HttpRequest.BodyPublishers.ofByteArray(baos.toByteArray()))
+      .build();
+    HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+    int status = response.statusCode();
+    boolean ok = (status - (status % 100)) == 200;
     if (!ok) {
       player.sendMessage(Component.text("Failed to communicate destination server"), MessageType.SYSTEM);
       return;
     }
+
     ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
     builder.fireAndForget();
   }
@@ -371,7 +421,7 @@ public class Plugin {
     String destinationServerName = in.readUTF();
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
-    if (!destination.isPresent()) {
+    if (destination.isEmpty()) {
       return;
     }
     ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());

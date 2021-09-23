@@ -56,7 +56,7 @@ public class IntraServerPortal extends Portal {
   }
 
   @Override
-  public void apply(Player player, int rpcPort, JavaPlugin source) {
+  public void apply(Player player, JavaPlugin source) {
     Location location = player.getLocation();
     UUID uuid = player.getWorld().getUID();
     if (!uuid.equals(this.worldUuid)) {

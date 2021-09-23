@@ -2,11 +2,9 @@ package com.github.giji34.plugins.spigot.command;
 
 import com.github.giji34.plugins.spigot.Loc;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -99,13 +97,12 @@ public class InterServerPortal extends Portal {
   }
 
   @Override
-  public void apply(Player player, int rpcPort, JavaPlugin source) {
+  public void apply(Player player, JavaPlugin source) {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos);
       dos.writeUTF("portal");
       dos.writeUTF(this.server);
-      dos.writeInt(rpcPort);
       dos.writeInt(this.dimension);
       dos.writeDouble(this.location.getX());
       dos.writeDouble(this.location.getY());
