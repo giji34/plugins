@@ -1,8 +1,8 @@
 package com.github.giji34.plugins.spigot.command;
 
-import com.github.giji34.plugins.spigot.DynmapSupport;
 import com.github.giji34.plugins.spigot.BiomeHelper;
 import com.github.giji34.plugins.spigot.BoundingBox;
+import com.github.giji34.plugins.spigot.DynmapSupport;
 import com.github.giji34.plugins.spigot.Loc;
 import org.bukkit.Location;
 import org.bukkit.Server;

@@ -9,3 +9,7 @@ spigot:
 .PHONY: velocity
 velocity:
 	(cd velocity && ../gradlew build)
+
+.PHONY: shared
+shared:
+	(cd shared && ../gradlew build)

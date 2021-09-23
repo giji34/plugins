@@ -2,6 +2,7 @@ package com.github.giji34.plugins.velocity;
 
 import com.google.common.io.ByteArrayDataInput;
 import com.google.inject.Inject;
+import com.googlecode.jsonrpc4j.JsonRpcHttpClient;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
@@ -14,7 +15,6 @@ import com.velocitypowered.api.proxy.ConnectionRequestBuilder;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
-import com.velocitypowered.api.proxy.messages.ChannelIdentifier;
 import com.velocitypowered.api.proxy.messages.ChannelMessageSource;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.proxy.player.TabList;
@@ -25,6 +25,7 @@ import net.kyori.adventure.text.Component;
 import org.slf4j.Logger;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -310,19 +311,24 @@ public class Plugin {
     if (id.equals("giji34:portal_v0")) {
       try {
         unsafeHandlePortalChannelV0(event);
-      } catch (Exception e) {
+      } catch (Throwable e) {
         System.err.println(e.getMessage());
       }
     }
   }
 
-  private void unsafeHandlePortalChannelV0(PluginMessageEvent e) throws Exception {
+  private void unsafeHandlePortalChannelV0(PluginMessageEvent e) throws Throwable {
     ByteArrayDataInput in = e.dataAsDataStream();
     String command = in.readUTF();
     if (!command.equals("connect")) {
       return;
     }
     String destinationServerName = in.readUTF();
+    String rpcUrl = in.readUTF();
+    int dimension = in.readInt();
+    double x = in.readDouble();
+    double y = in.readDouble();
+    double z = in.readDouble();
 
     ChannelMessageSource source = e.getSource();
     if (!(source instanceof ServerConnection)) {
@@ -332,6 +338,13 @@ public class Plugin {
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
     if (!destination.isPresent()) {
+      return;
+    }
+
+    JsonRpcHttpClient client = new JsonRpcHttpClient(new URL(rpcUrl));
+    Boolean ok = client.invoke("reserveDestination", new Object[]{player.getUniqueId(), dimension, x, y, z}, Boolean.class);
+    if (!ok) {
+      player.sendMessage(Component.text("Failed to communicate destination server"), MessageType.SYSTEM);
       return;
     }
     ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());

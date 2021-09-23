@@ -24,6 +24,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.dynmap.DynmapCommonAPIListener;
 import org.jetbrains.annotations.NotNull;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.io.File;
 import java.nio.file.FileStore;
@@ -49,6 +50,8 @@ public class Main extends JavaPlugin implements Listener {
   private static final int kPlayerIdleTimeoutMinutes = 10;
   private BukkitTask playerActivityWatchdog;
   private HashMap<UUID, LocalDateTime> playerActivity = new HashMap<>();
+  private final PortalService portalService = new PortalService();
+  private PortalServiceServlet portalServiceServlet;
 
   private final DebugStick debugStick = new DebugStick();
 
@@ -78,6 +81,7 @@ public class Main extends JavaPlugin implements Listener {
     } catch (Exception e) {
       getLogger().warning("error: " + e);
     }
+    startPortalService();
   }
 
   private void reload() {
@@ -794,5 +798,44 @@ public class Main extends JavaPlugin implements Listener {
     } else {
       return String.format("%.1f GiB", (bytes / (1024.0 * 1024.0 * 1024.0)));
     }
+  }
+
+  private void startPortalService() {
+    PortalServiceServlet servlet = new PortalServiceServlet(this.portalService);
+    try {
+      servlet.init();
+      portalServiceServlet = servlet;
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+    }
+  }
+
+  @EventHandler
+  public void onPlayerSpawnLocation(PlayerSpawnLocationEvent e) {
+    Player player = e.getPlayer();
+    UUID uuid = player.getUniqueId();
+    Optional<ReservedSpawnLocation> maybeLocation = this.portalService.drainReservation(uuid);
+    if (!maybeLocation.isPresent()) {
+      return;
+    }
+    ReservedSpawnLocation location = maybeLocation.get();
+    Optional<World> spawnWorld = getServer().getWorlds().stream().filter((world) -> {
+      World.Environment env = world.getEnvironment();
+      switch (location.dimension) {
+        case 0:
+          return env == World.Environment.NORMAL;
+        case 1:
+          return env == World.Environment.THE_END;
+        case -1:
+          return env == World.Environment.NETHER;
+        default:
+          return false;
+      }
+    }).findFirst();
+    if (!spawnWorld.isPresent()) {
+      return;
+    }
+    Location loc = new Location(spawnWorld.get(), location.x, location.y, location.z);
+    e.setSpawnLocation(loc);
   }
 }

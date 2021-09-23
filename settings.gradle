@@ -1,3 +1,4 @@
 rootProject.name = 'plugins'
 include ':spigot'
 include ':velocity'
+include ':shared'

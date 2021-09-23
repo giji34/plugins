@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+group 'com.github.giji34'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.github.briandilley.jsonrpc4j:jsonrpc4j:1.6'
+}
