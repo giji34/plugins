@@ -1,6 +1,6 @@
 name: giji34
 api-version: 1.13
-version: 0.35.0
+version: ${version}
 main: com.github.giji34.plugins.spigot.Main
 commands:
   tpl:

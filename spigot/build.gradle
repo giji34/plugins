@@ -7,6 +7,14 @@ dependencies {
   compileOnly 'com.viaversion:viaversion-api:4.0.1'
 }
 
+processResources {
+  filesMatching('plugin.yml') {
+    expand(
+      version: project.version
+    )
+  }
+}
+
 jar {
   archiveBaseName = 'giji34'
 }
