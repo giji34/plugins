@@ -1,0 +1,11 @@
+{
+  "id": "giji34_velocity_plugin",
+  "name": "giji34-velocity-plugin",
+  "version": "${version}",
+  "description": "A velocity plugin for giji34",
+  "authors": [
+    "kbinani"
+  ],
+  "dependencies": [],
+  "main": "com.github.giji34.plugins.velocity.Plugin"
+}

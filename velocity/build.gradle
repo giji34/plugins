@@ -5,6 +5,14 @@ dependencies {
   annotationProcessor 'com.velocitypowered:velocity-api:3.0.1'
 }
 
+processResources {
+  filesMatching('velocity-plugin.json') {
+    expand(
+      version: project.version
+    )
+  }
+}
+
 jar {
   archiveBaseName = 'giji34-velocity-plugin'
 }
