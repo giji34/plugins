@@ -12,3 +12,7 @@ spigot:
 .PHONY: velocity
 velocity:
 	./gradlew :velocity:build
+
+.PHONY: clean
+clean:
+	./gradlew clean
