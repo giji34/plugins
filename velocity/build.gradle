@@ -3,6 +3,8 @@ version '2.0.0'
 dependencies {
   compileOnly 'com.velocitypowered:velocity-api:3.0.1'
   annotationProcessor 'com.velocitypowered:velocity-api:3.0.1'
+  implementation 'redis.clients:jedis:3.6.0'
+  implementation project(':shared')
 }
 
 processResources {
@@ -15,4 +17,12 @@ processResources {
 
 jar {
   setArchivesBaseName('giji34-velocity-plugin')
+  dependsOn(shadowJar)
+}
+
+shadowJar {
+  dependencies {
+    include(dependency('redis.clients:jedis:3.6.0'))
+    include(dependency(':shared'))
+  }
 }
