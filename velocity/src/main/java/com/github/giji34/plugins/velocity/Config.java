@@ -3,10 +3,11 @@ package com.github.giji34.plugins.velocity;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.HashMap;
+import java.util.Optional;
 
 public class Config {
-  public String redisHost = "";
-  public int redisPort = -1;
+  private HashMap<String, Integer> rpcPorts = new HashMap<>();
 
   public void load(File file) {
     try {
@@ -19,8 +20,7 @@ public class Config {
 
   private void unsafeLoad(File file) throws Exception {
     /*
-    redis.host=host
-    redis.port=port
+    rpc[]=server:port
     */
     BufferedReader br = new BufferedReader(new FileReader(file));
     String line;
@@ -31,11 +31,23 @@ public class Config {
       }
       String key = tokens[0];
       String value = tokens[1];
-      if (key.equals("redis.host")) {
-        redisHost = value.trim();
-      } else if (key.equals("redis.port")) {
-        redisPort = Integer.parseInt(value, 10);
+      if (key.equals("rpc[]")) {
+        String[] s = value.split(":");
+        if (s.length != 2) {
+          continue;
+        }
+        String server = s[0];
+        int port = Integer.parseInt(s[1], 10);
+        rpcPorts.put(server, port);
       }
+    }
+  }
+
+  public Optional<Integer> getRpcPort(String server) {
+    if (rpcPorts.containsKey(server)) {
+      return Optional.of(rpcPorts.get(server));
+    } else {
+      return Optional.empty();
     }
   }
 }

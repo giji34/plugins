@@ -12,29 +12,23 @@ public class Config {
   public final int snapshotServerPort;
   public final boolean isSightSeeing;
   public final String[] monitoringFilesystemMountPoints;
-  public final String redisHost;
-  public final int redisPort;
-  public final String serverName;
+  public final int rpcPort;
 
-  private Config(String serverName, String snapshotServerHost, int snapshotServerPort, boolean isSightSeeing, String[] monitoringFilesystemMountPoints, String redisHost, int redisPort) {
-    this.serverName = serverName;
+  private Config(String snapshotServerHost, int snapshotServerPort, boolean isSightSeeing, String[] monitoringFilesystemMountPoints, int rpcPort) {
     this.snapshotServerHost = snapshotServerHost;
     this.snapshotServerPort = snapshotServerPort;
     this.isSightSeeing = isSightSeeing;
     this.monitoringFilesystemMountPoints = monitoringFilesystemMountPoints;
-    this.redisHost = redisHost;
-    this.redisPort = redisPort;
+    this.rpcPort = rpcPort;
   }
 
   static Config Load(Logger logger, File pluginDirectory) {
     File config = new File(pluginDirectory, "config.properties");
-    String serverName = "";
     String snapshotServerHost = "";
     int snapshotServerPort = 0;
     boolean sightseeing = true;
     ArrayList<String> monitoringFilesystemMountPoints = new ArrayList<>();
-    String redisHost = "";
-    int redisPort = -1;
+    int rpcPort = -1;
     try {
       FileInputStream fis = new FileInputStream(config);
       BufferedReader br = new BufferedReader(new InputStreamReader(fis));
@@ -54,17 +48,13 @@ public class Config {
           sightseeing = !value.equals("false");
         } else if (key.equals("fs.mountpoints[]")) {
           monitoringFilesystemMountPoints.add(value.trim());
-        } else if (key.equals("redis.host")) {
-          redisHost = value.trim();
-        } else if (key.equals("redis.port")) {
-          redisPort = Integer.parseInt(value, 10);
-        } else if (key.equals("name")) {
-          serverName = value.trim();
+        } else if (key.equals("rpc.port")) {
+          rpcPort = Integer.parseInt(value, 10);
         }
       }
     } catch (Exception e) {
       logger.warning("config.properties がありません");
     }
-    return new Config(serverName, snapshotServerHost, snapshotServerPort, sightseeing, monitoringFilesystemMountPoints.toArray(new String[0]), redisHost, redisPort);
+    return new Config(snapshotServerHost, snapshotServerPort, sightseeing, monitoringFilesystemMountPoints.toArray(new String[0]), rpcPort);
   }
 }

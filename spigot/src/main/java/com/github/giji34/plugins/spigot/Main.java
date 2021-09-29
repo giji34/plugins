@@ -1,6 +1,5 @@
 package com.github.giji34.plugins.spigot;
 
-import com.github.giji34.plugins.shared.ChannelNames;
 import com.github.giji34.plugins.spigot.command.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -78,10 +77,11 @@ public class Main extends JavaPlugin implements Listener {
       this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
       this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
       this.hibernate = new Hibernate(this, this.dynmap);
-      this.portalService = new PortalService(getLogger(), this.config.serverName, this.config.redisHost, this.config.redisPort);
+      this.portalService = new PortalService(getLogger(), this.config.rpcPort);
     } catch (Exception e) {
       getLogger().warning("error: " + e);
     }
+    startPortalService();
   }
 
   private void reload() {
@@ -132,7 +132,7 @@ public class Main extends JavaPlugin implements Listener {
     if (gclone != null) {
       gclone.setTabCompleter(new LookingAtTabCompleter());
     }
-    getServer().getMessenger().registerOutgoingPluginChannel(this, ChannelNames.kSpigotPluginChannel);
+    getServer().getMessenger().registerOutgoingPluginChannel(this, InterServerPortal.kPortalPluginChannel);
     getServer().getPluginManager().registerEvents(this, this);
 
     hibernate.enable();
@@ -776,6 +776,10 @@ public class Main extends JavaPlugin implements Listener {
     } else {
       return String.format("%.1f GiB", (bytes / (1024.0 * 1024.0 * 1024.0)));
     }
+  }
+
+  private void startPortalService() {
+    this.portalService.start();
   }
 
   @EventHandler

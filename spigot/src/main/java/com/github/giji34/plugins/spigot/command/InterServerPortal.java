@@ -1,6 +1,5 @@
 package com.github.giji34.plugins.spigot.command;
 
-import com.github.giji34.plugins.shared.ChannelNames;
 import com.github.giji34.plugins.spigot.Loc;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
@@ -17,6 +16,8 @@ public class InterServerPortal extends Portal {
   public final String server;
   public final int dimension;
   public final Location location;
+
+  public static final String kPortalPluginChannel = "giji34:portal_v0";
 
   InterServerPortal(String name, UUID worldUuid, List<Loc> blocks, String server, int dimension, Location location) {
     super(name, worldUuid, blocks);
@@ -108,7 +109,7 @@ public class InterServerPortal extends Portal {
       dos.writeDouble(this.location.getZ());
       dos.writeFloat(this.location.getYaw());
 
-      player.sendPluginMessage(source, ChannelNames.kSpigotPluginChannel, baos.toByteArray());
+      player.sendPluginMessage(source, kPortalPluginChannel, baos.toByteArray());
       baos.close();
       dos.close();
     } catch (Exception e) {
@@ -123,7 +124,7 @@ public class InterServerPortal extends Portal {
       dos.writeUTF("connect");
       dos.writeUTF(destination);
 
-      player.sendPluginMessage(source, ChannelNames.kSpigotPluginChannel, baos.toByteArray());
+      player.sendPluginMessage(source, kPortalPluginChannel, baos.toByteArray());
       baos.close();
       dos.close();
     } catch (Exception e) {
