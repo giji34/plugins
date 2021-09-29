@@ -1,5 +1,6 @@
 package com.github.giji34.plugins.velocity;
 
+import com.github.giji34.plugins.shared.ChannelNames;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
@@ -9,6 +10,7 @@ import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ConnectionRequestBuilder;
 import com.velocitypowered.api.proxy.Player;
@@ -23,15 +25,11 @@ import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.slf4j.Logger;
+import redis.clients.jedis.Jedis;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +41,10 @@ public class Plugin {
   Path configPaths;
   private final HashSet<UUID> members = new HashSet<>();
   private Config config;
+  private Jedis subscribingRedisClient;
+  private Jedis dialingRedisClient;
+  private final ArrayList<ConnectionRequestDispatcher> subscriptions = new ArrayList<>();
+  private Thread redisSubscribingThread;
 
   @Inject
   public Plugin(ProxyServer server, Logger logger, @DataDirectory Path configPaths) {
@@ -79,7 +81,24 @@ public class Plugin {
       .repeat(1, TimeUnit.SECONDS)
       .delay(1, TimeUnit.SECONDS)
       .schedule();
-    server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("giji34:portal_v0"));
+    server.getChannelRegistrar().register(MinecraftChannelIdentifier.from(ChannelNames.kSpigotPluginChannel));
+    subscribingRedisClient = new Jedis(config.redisHost, config.redisPort);
+    ConnectionRequestDispatcher dispatcher = new ConnectionRequestDispatcher(server);
+    subscriptions.add(dispatcher);
+    redisSubscribingThread = new Thread(() -> {
+      subscribingRedisClient.psubscribe(dispatcher, ChannelNames.kRedisCallbackChannelPrefix + "*");
+    });
+    redisSubscribingThread.start();
+
+    dialingRedisClient = new Jedis(config.redisHost, config.redisPort);
+  }
+
+  @Subscribe
+  public void onProxyShutdown(ProxyShutdownEvent e) {
+    for (ConnectionRequestDispatcher dispatcher : subscriptions) {
+      dispatcher.punsubscribe();
+    }
+    subscriptions.clear();
   }
 
   @Subscribe
@@ -180,7 +199,7 @@ public class Plugin {
   private static boolean IsInSameServer(Player a, Player b) {
     Optional<ServerConnection> serverA = a.getCurrentServer();
     Optional<ServerConnection> serverB = b.getCurrentServer();
-    if (!serverA.isPresent() || !serverB.isPresent()) {
+    if (serverA.isEmpty() || serverB.isEmpty()) {
       return false;
     }
     String nameA = serverA.get().getServerInfo().getName();
@@ -206,7 +225,7 @@ public class Plugin {
           continue;
         }
         Optional<UUID> uuid = UuidFromString(columns[0]);
-        if (!uuid.isPresent()) {
+        if (uuid.isEmpty()) {
           continue;
         }
         loaded.add(uuid.get());
@@ -245,7 +264,7 @@ public class Plugin {
           continue;
         }
         Optional<UUID> uuid = UuidFromString(columns[0]);
-        if (!uuid.isPresent()) {
+        if (uuid.isEmpty()) {
           continue;
         }
         if (!this.members.contains(uuid.get())) {
@@ -329,7 +348,7 @@ public class Plugin {
   @Subscribe
   public void onPluginMessage(PluginMessageEvent event) {
     String id = event.getIdentifier().getId();
-    if (id.equals("giji34:portal_v0")) {
+    if (id.equals(ChannelNames.kSpigotPluginChannel)) {
       handlePortalChannelV0(event);
     }
   }
@@ -365,12 +384,6 @@ public class Plugin {
 
   private void handlePortalChannelPortalCommandV0(ServerConnection connection, ByteArrayDataInput in) throws Throwable {
     String destinationServerName = in.readUTF();
-    Optional<Integer> maybeRpcPort = this.config.getRpcPort(destinationServerName);
-    if (maybeRpcPort.isEmpty()) {
-      logger.warn("rpc port unknonw for server: " + destinationServerName);
-      return;
-    }
-    int rpcPort = maybeRpcPort.get();
     int dimension = in.readInt();
     double x = in.readDouble();
     double y = in.readDouble();
@@ -383,9 +396,6 @@ public class Plugin {
       return;
     }
 
-    InetAddress address = connection.getServerInfo().getAddress().getAddress();
-    String url = "http://" + address.getHostAddress() + ":" + rpcPort + "/portal/reserve_spawn_location";
-
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
     dos.writeUTF(player.getUniqueId().toString());
@@ -395,28 +405,10 @@ public class Plugin {
     dos.writeDouble(z);
     dos.writeFloat(yaw);
 
-    HttpClient client = HttpClient.newBuilder()
-      .version(HttpClient.Version.HTTP_1_1)
-      .followRedirects(HttpClient.Redirect.NORMAL)
-      .connectTimeout(Duration.ofSeconds(10))
-      .build();
-    HttpRequest request = HttpRequest.newBuilder()
-      .uri(URI.create(url))
-      .POST(HttpRequest.BodyPublishers.ofByteArray(baos.toByteArray()))
-      .build();
-    HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-    int status = response.statusCode();
-    boolean ok = (status - (status % 100)) == 200;
-    if (!ok) {
-      player.sendMessage(Component.text("Failed to communicate destination server"), MessageType.SYSTEM);
-      return;
-    }
-
-    ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
-    builder.fireAndForget();
+    dialingRedisClient.publish(ChannelNames.getRedisDialChannelName(destinationServerName).getBytes(StandardCharsets.UTF_8), baos.toByteArray());
   }
 
-  private void handlePortalChannelConnectCommandV0(ServerConnection connection, ByteArrayDataInput in) throws Throwable {
+  private void handlePortalChannelConnectCommandV0(ServerConnection connection, ByteArrayDataInput in) {
     String destinationServerName = in.readUTF();
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
