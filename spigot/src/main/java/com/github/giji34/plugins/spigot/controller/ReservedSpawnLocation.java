@@ -1,4 +1,4 @@
-package com.github.giji34.plugins.spigot.command;
+package com.github.giji34.plugins.spigot.controller;
 
 public class ReservedSpawnLocation {
   public final int dimension;
