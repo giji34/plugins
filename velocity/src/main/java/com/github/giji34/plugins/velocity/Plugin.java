@@ -1,5 +1,6 @@
 package com.github.giji34.plugins.velocity;
 
+import com.github.giji34.plugins.shared.ChannelNames;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
@@ -79,7 +80,7 @@ public class Plugin {
       .repeat(1, TimeUnit.SECONDS)
       .delay(1, TimeUnit.SECONDS)
       .schedule();
-    server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("giji34:portal_v0"));
+    server.getChannelRegistrar().register(MinecraftChannelIdentifier.from(ChannelNames.kSpigotPluginChannel));
   }
 
   @Subscribe
@@ -329,7 +330,7 @@ public class Plugin {
   @Subscribe
   public void onPluginMessage(PluginMessageEvent event) {
     String id = event.getIdentifier().getId();
-    if (id.equals("giji34:portal_v0")) {
+    if (id.equals(ChannelNames.kSpigotPluginChannel)) {
       handlePortalChannelV0(event);
     }
   }

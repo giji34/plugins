@@ -1,5 +1,6 @@
 package com.github.giji34.plugins.spigot;
 
+import com.github.giji34.plugins.shared.ChannelNames;
 import com.github.giji34.plugins.spigot.command.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -132,7 +133,7 @@ public class Main extends JavaPlugin implements Listener {
     if (gclone != null) {
       gclone.setTabCompleter(new LookingAtTabCompleter());
     }
-    getServer().getMessenger().registerOutgoingPluginChannel(this, InterServerPortal.kPortalPluginChannel);
+    getServer().getMessenger().registerOutgoingPluginChannel(this, ChannelNames.kSpigotPluginChannel);
     getServer().getPluginManager().registerEvents(this, this);
 
     hibernate.enable();
