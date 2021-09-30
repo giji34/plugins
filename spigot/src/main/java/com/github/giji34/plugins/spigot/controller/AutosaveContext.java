@@ -25,9 +25,11 @@ public class AutosaveContext implements HttpHandler {
     if (method.equalsIgnoreCase("post")) {
       if (path.equalsIgnoreCase("increment_suspention_ticket")) {
         service.incrementAutosaveSuspentionTicket();
+        ControllerService.CloseHttpExchange(t, 200);
         return;
       } else if (path.equalsIgnoreCase("decrement_suspention_ticket")) {
         service.decrementAutosaveSuspentionTicket();
+        ControllerService.CloseHttpExchange(t, 200);
         return;
       }
     }
