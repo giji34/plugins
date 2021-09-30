@@ -6,7 +6,6 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.UUID;
 
 public class PortalContext implements HttpHandler {
@@ -22,14 +21,14 @@ public class PortalContext implements HttpHandler {
     final String method = exchange.getRequestMethod();
     final String fullPath = exchange.getRequestURI().getPath();
     if (!fullPath.startsWith(kPath)) {
-      send404NotFound(exchange);
+      ControllerService.CloseHttpExchange(exchange, 404);
       return;
     }
     String path = fullPath.substring(kPath.length());
     if (method.equalsIgnoreCase("post") && path.equalsIgnoreCase("reserve_spawn_location")) {
       handleReserveSpawnLocation(exchange);
     } else {
-      send404NotFound(exchange);
+      ControllerService.CloseHttpExchange(exchange, 404);
     }
   }
 
@@ -50,25 +49,11 @@ public class PortalContext implements HttpHandler {
       z = dis.readDouble();
       yaw = dis.readFloat();
     } catch (IOException e) {
-      send500InternalError(t);
+      ControllerService.CloseHttpExchange(t, 500);
       return;
     }
     UUID uuid = UUID.fromString(uuidString);
     service.reserveSpawnLocation(uuid, dimension, x, y, z, yaw);
-    t.sendResponseHeaders(200, 0);
-    OutputStream os = t.getResponseBody();
-    os.close();
-  }
-
-  private void send404NotFound(HttpExchange t) throws IOException {
-    t.sendResponseHeaders(404, 0);
-    OutputStream os = t.getResponseBody();
-    os.close();
-  }
-
-  private void send500InternalError(HttpExchange t) throws IOException {
-    t.sendResponseHeaders(500, 0);
-    OutputStream os = t.getResponseBody();
-    os.close();
+    ControllerService.CloseHttpExchange(t, 200);
   }
 }

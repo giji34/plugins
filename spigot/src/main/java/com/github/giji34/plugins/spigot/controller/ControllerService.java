@@ -1,23 +1,37 @@
 package com.github.giji34.plugins.spigot.controller;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
+import org.bukkit.World;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitScheduler;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 public class ControllerService {
   private final HashMap<UUID, ReservedSpawnLocation> reservation = new HashMap<>();
+  private final JavaPlugin owner;
   private final Logger logger;
   private final int port;
   private final PortalContext portalContext;
+  private final AutosaveContext autosaveContext;
+  private AtomicInteger autosaveSuspentionTicket = new AtomicInteger(0);
 
-  public ControllerService(Logger logger, int port) {
-    this.logger = logger;
+  public ControllerService(JavaPlugin owner, int port) {
+    this.owner = owner;
+    this.logger = owner.getLogger();
     this.port = port;
     this.portalContext = new PortalContext(this);
+    this.autosaveContext = new AutosaveContext(this);
   }
 
   public void start() {
@@ -31,6 +45,7 @@ public class ControllerService {
   private void unsafeStart() throws Throwable {
     HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
     server.createContext(PortalContext.kPath, portalContext);
+    server.createContext(AutosaveContext.kPath, autosaveContext);
     server.start();
     logger.info("started rpc server on port: " + port);
   }
@@ -52,5 +67,40 @@ public class ControllerService {
         return Optional.empty();
       }
     }
+  }
+
+  void incrementAutosaveSuspentionTicket() {
+    int count = autosaveSuspentionTicket.incrementAndGet();
+    if (count == 1) {
+      Server server = Bukkit.getServer();
+      BukkitScheduler scheduler = server.getScheduler();
+      scheduler.runTask(owner, () -> {
+        for (World world : server.getWorlds()) {
+          world.setAutoSave(false);
+        }
+        for (World world : server.getWorlds()) {
+          world.save();
+        }
+      });
+    }
+  }
+
+  void decrementAutosaveSuspentionTicket() {
+    int count = autosaveSuspentionTicket.decrementAndGet();
+    if (count == 0) {
+      Server server = Bukkit.getServer();
+      BukkitScheduler scheduler = server.getScheduler();
+      scheduler.runTask(owner, () -> {
+        for (World world : server.getWorlds()) {
+          world.setAutoSave(true);
+        }
+      });
+    }
+  }
+
+  static void CloseHttpExchange(HttpExchange t, int status) throws IOException {
+    t.sendResponseHeaders(status, 0);
+    OutputStream os = t.getResponseBody();
+    os.close();
   }
 }
