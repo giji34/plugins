@@ -2,6 +2,7 @@ package com.github.giji34.plugins.spigot.controller;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import org.bukkit.Bukkit;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,7 +30,8 @@ public class StatisticsContext implements HttpHandler {
         OutputStream os = t.getResponseBody();
         byte[] message;
         if (service.needsBackup()) {
-          message = "yes".getBytes(StandardCharsets.UTF_8);
+          int onlinePlayers = Bukkit.getServer().getOnlinePlayers().size();
+          message = ("" + onlinePlayers).getBytes(StandardCharsets.UTF_8);
         } else {
           message = "no".getBytes(StandardCharsets.UTF_8);
         }
