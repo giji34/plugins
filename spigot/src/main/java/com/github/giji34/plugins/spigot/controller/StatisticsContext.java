@@ -33,9 +33,9 @@ public class StatisticsContext implements HttpHandler {
         } else {
           message = "no".getBytes(StandardCharsets.UTF_8);
         }
+        t.sendResponseHeaders(200, message.length);
         os.write(message);
         os.close();
-        t.sendResponseHeaders(200, message.length);
         return;
       }
     } else if (method.equalsIgnoreCase("post")) {
