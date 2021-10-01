@@ -53,7 +53,7 @@ public class Main extends JavaPlugin implements Listener {
   private static final int kPlayerIdleTimeoutMinutes = 10;
   private BukkitTask playerActivityWatchdog;
   private HashMap<UUID, LocalDateTime> playerActivity = new HashMap<>();
-  private ControllerService portalService;
+  private ControllerService controllerService;
 
   private final DebugStick debugStick = new DebugStick();
 
@@ -80,7 +80,7 @@ public class Main extends JavaPlugin implements Listener {
       this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
       this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
       this.hibernate = new Hibernate(this, this.dynmap);
-      this.portalService = new ControllerService(getLogger(), this.config.rpcPort);
+      this.controllerService = new ControllerService(this, this.config.rpcPort);
     } catch (Exception e) {
       getLogger().warning("error: " + e);
     }
@@ -474,6 +474,7 @@ public class Main extends JavaPlugin implements Listener {
     addPotionEffects(player);
     notifyOp(player);
     this.playerActivity.put(player.getUniqueId(), LocalDateTime.now());
+    this.controllerService.setNeedsBackup();
 
     if (this.permission.hasRole(player, "member")) {
       portalCommand.setAnyPortalCooldown(player);
@@ -782,14 +783,14 @@ public class Main extends JavaPlugin implements Listener {
   }
 
   private void startPortalService() {
-    this.portalService.start();
+    this.controllerService.start();
   }
 
   @EventHandler
   public void onPlayerSpawnLocation(PlayerSpawnLocationEvent e) {
     Player player = e.getPlayer();
     UUID uuid = player.getUniqueId();
-    Optional<ReservedSpawnLocation> maybeLocation = this.portalService.drainReservedSpawnLocation(uuid);
+    Optional<ReservedSpawnLocation> maybeLocation = this.controllerService.drainReservedSpawnLocation(uuid);
     if (maybeLocation.isEmpty()) {
       return;
     }

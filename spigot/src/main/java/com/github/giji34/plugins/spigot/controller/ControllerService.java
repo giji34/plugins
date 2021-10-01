@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -25,6 +26,8 @@ public class ControllerService {
   private final PortalContext portalContext;
   private final AutosaveContext autosaveContext;
   private AtomicInteger autosaveSuspentionTicket = new AtomicInteger(0);
+  private AtomicBoolean needsBackup = new AtomicBoolean(false);
+  private final StatisticsContext statisticsContext;
 
   public ControllerService(JavaPlugin owner, int port) {
     this.owner = owner;
@@ -32,6 +35,7 @@ public class ControllerService {
     this.port = port;
     this.portalContext = new PortalContext(this);
     this.autosaveContext = new AutosaveContext(this);
+    this.statisticsContext = new StatisticsContext(this);
   }
 
   public void start() {
@@ -46,6 +50,7 @@ public class ControllerService {
     HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
     server.createContext(PortalContext.kPath, portalContext);
     server.createContext(AutosaveContext.kPath, autosaveContext);
+    server.createContext(StatisticsContext.kPath, statisticsContext);
     server.start();
     logger.info("started rpc server on port: " + port);
   }
@@ -96,6 +101,19 @@ public class ControllerService {
         }
       });
     }
+  }
+
+  public void setNeedsBackup() {
+    needsBackup.set(true);
+  }
+
+  void clearNeedsBackupIfPossible() {
+    Server server = Bukkit.getServer();
+    needsBackup.set(!server.getOnlinePlayers().isEmpty());
+  }
+
+  boolean needsBackup() {
+    return needsBackup.get();
   }
 
   static void CloseHttpExchange(HttpExchange t, int status) throws IOException {
