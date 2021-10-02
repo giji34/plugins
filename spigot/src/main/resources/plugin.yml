@@ -34,4 +34,6 @@ commands:
   giji34:
   gclone:
   hibernate:
+  /:
+    usage: // <block>
 depend: [dynmap, ViaVersion]

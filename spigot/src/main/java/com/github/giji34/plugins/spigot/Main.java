@@ -6,6 +6,7 @@ import com.github.giji34.plugins.spigot.controller.ControllerService;
 import com.github.giji34.plugins.spigot.controller.ReservedSpawnLocation;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -135,6 +136,10 @@ public class Main extends JavaPlugin implements Listener {
     if (gclone != null) {
       gclone.setTabCompleter(new LookingAtTabCompleter());
     }
+    PluginCommand hotbar = getCommand("/");
+    if (hotbar != null) {
+      hotbar.setTabCompleter(new BlockNameTabCompleter());
+    }
     getServer().getMessenger().registerOutgoingPluginChannel(this, ChannelNames.kSpigotPluginChannel);
     getServer().getPluginManager().registerEvents(this, this);
 
@@ -218,6 +223,8 @@ public class Main extends JavaPlugin implements Listener {
         return this.handleCloneCommand(player, args);
       case "hibernate":
         return this.handleHibernate(player, args);
+      case "/":
+        return this.handleHotbarCommand(player, args, command);
       default:
         return false;
     }
@@ -813,5 +820,33 @@ public class Main extends JavaPlugin implements Listener {
     }
     Location loc = new Location(spawnWorld.get(), location.x, location.y, location.z, location.yaw, 0);
     e.setSpawnLocation(loc);
+  }
+
+  private boolean handleHotbarCommand(Player player, String[] args, Command command) {
+    if (!this.permission.hasRole(player, "member")) {
+      return false;
+    }
+    if (args.length == 0) {
+      return false;
+    }
+    String blockName = args[0];
+    BlockNameTabCompleter completer = new BlockNameTabCompleter();
+    List<String> candidates = completer.onTabComplete(player, command, "", args);
+    if (candidates != null && candidates.size() == 1) {
+      blockName = candidates.get(0);
+    }
+
+    PlayerInventory inventory = player.getInventory();
+    Server server = player.getServer();
+    BlockData blockData;
+    try {
+      blockData = server.createBlockData(blockName);
+    } catch (Throwable e) {
+      player.sendMessage(ChatColor.RED + "Cannot create BlockData from: \"" + blockName + "\"");
+      return true;
+    }
+    ItemStack itemStack = new ItemStack(blockData.getMaterial());
+    inventory.setItemInMainHand(itemStack);
+    return true;
   }
 }
