@@ -13,25 +13,19 @@ import java.util.Optional;
 public class BlockStateMapping {
   private final JavaPlugin owner;
 
-  private final Map<String, String> table1_13To1_13_2;
-  private final Map<String, String> table1_13_2To1_14;
-  private final Map<String, String> table1_14To1_15;
-  private final Map<String, String> table1_15To1_16;
-  private final Map<String, String> table1_16To1_16_2;
-  private final Map<String, String> table1_16_2To1_17;
-
   private final Map<String, String>[] tableChain;
   private final GameVersion[] tableVersions;
 
-  BlockStateMapping(JavaPlugin owner) {
+  BlockStateMapping(JavaPlugin owner) throws AssertionError {
     this.owner = owner;
 
-    this.table1_13To1_13_2 = load("1.13", "1.13.2");
-    this.table1_13_2To1_14 = load("1.13.2", "1.14");
-    this.table1_14To1_15 = load("1.14", "1.15");
-    this.table1_15To1_16 = load("1.15", "1.16");
-    this.table1_16To1_16_2 = load("1.16", "1.16.2");
-    this.table1_16_2To1_17 = load("1.16.2", "1.17");
+    // https://github.com/ViaVersion/ViaVersion/tree/master/common/src/main/resources/assets/viaversion/data
+    Map<String, String> table1_13To1_13_2 = load("1.13", "1.13.2");
+    Map<String, String> table1_13_2To1_14 = load("1.13.2", "1.14");
+    Map<String, String> table1_14To1_15 = load("1.14", "1.15");
+    Map<String, String> table1_15To1_16 = load("1.15", "1.16");
+    Map<String, String> table1_16To1_16_2 = load("1.16", "1.16.2");
+    Map<String, String> table1_16_2To1_17 = load("1.16.2", "1.17");
 
     this.tableChain = new Map[]{table1_13To1_13_2, table1_13_2To1_14, table1_14To1_15, table1_15To1_16, table1_16To1_16_2, table1_16_2To1_17};
     this.tableVersions = new GameVersion[]{
@@ -43,6 +37,9 @@ public class BlockStateMapping {
       new GameVersion(1, 16, 2),
       new GameVersion(1, 17, 0),
     };
+    if (this.tableChain.length + 1 != this.tableVersions.length) {
+      throw new AssertionError();
+    }
   }
 
   Map<String, String> load(String from, String to) {
@@ -50,13 +47,13 @@ public class BlockStateMapping {
 
     JsonObject fromData = MappingDataLoader.loadData("mapping-" + from + ".json");
     Optional<JsonObject> fromBlockStates = GetAsJsonObject(fromData, "blockstates");
-    if (!fromBlockStates.isPresent()) {
+    if (fromBlockStates.isEmpty()) {
       return ret;
     }
 
     JsonObject diffData = MappingDataLoader.loadData("mappingdiff-" + from + "to" + to + ".json");
     Optional<JsonObject> diffBlockStates = GetAsJsonObject(diffData, "blockstates");
-    if (!diffBlockStates.isPresent()) {
+    if (diffBlockStates.isEmpty()) {
       return ret;
     }
 
@@ -115,12 +112,19 @@ public class BlockStateMapping {
     int fromIndex = -1;
     int toIndex = -1;
     for (int i = 0; i < tableChain.length; i++) {
-      GameVersion version = tableVersions[i];
-      if (fromIndex < 0 && version.grater(from)) {
+      GameVersion v0 = tableVersions[i];
+      GameVersion v1 = tableVersions[i + 1];
+      if (v0.lessOrEqual(from) && from.less(v1)) {
         fromIndex = i;
+        break;
       }
-      if (version.lessOrEqual(current)) {
+    }
+    for (int i = 0; i < tableChain.length; i++) {
+      GameVersion v0 = tableVersions[i];
+      GameVersion v1 = tableVersions[i + 1];
+      if (v0.less(current) && current.lessOrEqual(v1)) {
         toIndex = i;
+        break;
       }
     }
     if (fromIndex < 0) {
