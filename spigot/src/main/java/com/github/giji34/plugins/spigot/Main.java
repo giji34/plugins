@@ -459,20 +459,27 @@ public class Main extends JavaPlugin implements Listener {
     }
     Item item = (Item) e.getEntity();
     ItemStack itemStack = item.getItemStack();
-    if (itemStack.getType() != Material.MINECART) {
-      return;
-    }
-    List<String> rails = GetMissingRails(itemStack);
-    if (rails.isEmpty()) {
-      return;
-    }
-    UUID id = e.getEntity().getUniqueId();
+    Material material = itemStack.getType();
     Server server = getServer();
-    server.getScheduler().runTask(this, () -> {
-      ConsoleCommandSender console = server.getConsoleSender();
-      String command = "data merge entity " + id + " {Item:{tag:{" + TagCanPlaceOn(rails) + "}}}";
-      server.dispatchCommand(console, command);
-    });
+    UUID id = e.getEntity().getUniqueId();
+
+    if (material == Material.MINECART) {
+      List<String> rails = GetMissingRails(itemStack);
+      if (rails.isEmpty()) {
+        return;
+      }
+      server.getScheduler().runTask(this, () -> {
+        ConsoleCommandSender console = server.getConsoleSender();
+        String command = "data merge entity " + id + " {Item:{tag:{" + TagCanPlaceOn(rails) + "}}}";
+        server.dispatchCommand(console, command);
+      });
+    } else if (material.name().startsWith("MUSIC_DISC_")) {
+      server.getScheduler().runTask(this, () -> {
+        ConsoleCommandSender console = server.getConsoleSender();
+        String command = "data merge entity " + id + " {Item:{tag:{CanPlaceOn:[minecraft:jukebox]}}}";
+        server.dispatchCommand(console, command);
+      });
+    }
   }
 
   @EventHandler
