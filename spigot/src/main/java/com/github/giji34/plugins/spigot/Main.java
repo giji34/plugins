@@ -476,7 +476,7 @@ public class Main extends JavaPlugin implements Listener {
     } else if (material.name().startsWith("MUSIC_DISC_")) {
       server.getScheduler().runTask(this, () -> {
         ConsoleCommandSender console = server.getConsoleSender();
-        String command = "data merge entity " + id + " {Item:{tag:{CanPlaceOn:[minecraft:jukebox]}}}";
+        String command = "data merge entity " + id + " {Item:{tag:{CanPlaceOn:[\"minecraft:jukebox\"]}}}";
         server.dispatchCommand(console, command);
       });
     }
