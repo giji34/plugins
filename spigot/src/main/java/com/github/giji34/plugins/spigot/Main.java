@@ -14,6 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.*;
@@ -855,5 +856,20 @@ public class Main extends JavaPlugin implements Listener {
     ItemStack itemStack = new ItemStack(blockData.getMaterial());
     inventory.setItemInMainHand(itemStack);
     return true;
+  }
+
+  @EventHandler
+  public void onEntityChangeBlock(EntityChangeBlockEvent e) {
+    if (e.getEntityType() != EntityType.SHEEP) {
+      return;
+    }
+    Entity entity = e.getEntity();
+    if (!(entity instanceof Sheep)) {
+      return;
+    }
+    Sheep sheep = (Sheep) entity;
+    if (!sheep.isSheared()) {
+      e.setCancelled(true);
+    }
   }
 }
