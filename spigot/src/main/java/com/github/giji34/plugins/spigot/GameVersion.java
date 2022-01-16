@@ -73,6 +73,10 @@ public class GameVersion {
       return new GameVersion(1, 17, 0);
     } else if (version <= 2730) {
       return new GameVersion(1, 17, 1);
+    } else if (version <= 2860) {
+      return new GameVersion(1, 18, 0);
+    } else if (version <= 2865) {
+      return new GameVersion(1, 18, 1);
     }
     return null;
   }
