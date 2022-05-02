@@ -34,7 +34,12 @@ public class ReplaceOperation {
     ops.forEach((loc, data) -> {
       String beforeBiomeName = null;
       if (data.biome != null) {
-        Biome beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
+        Biome beforeBiome;
+        try {
+          beforeBiome = world.getBiome(loc.x, loc.y, loc.z);
+        } catch (NoSuchMethodError e) {
+          beforeBiome = world.getBiome(loc.x, loc.z);
+        }
         Biome afterBiome = BiomeHelper.Resolve(data.biome, server);
         if (afterBiome != beforeBiome) {
           beforeBiomeName = beforeBiome.name();
