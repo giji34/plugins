@@ -43,7 +43,11 @@ public class ReplaceOperation {
         Biome afterBiome = BiomeHelper.Resolve(data.biome, server);
         if (afterBiome != beforeBiome) {
           beforeBiomeName = beforeBiome.name();
-          world.setBiome(loc.x, loc.y, loc.z, afterBiome);
+          try {
+            world.setBiome(loc.x, loc.y, loc.z, afterBiome);
+          } catch (NoSuchMethodError e) {
+            world.setBiome(loc.x, loc.z, afterBiome);
+          }
           bb.add(loc);
         }
       }
