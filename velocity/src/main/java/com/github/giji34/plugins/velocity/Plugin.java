@@ -125,9 +125,13 @@ public class Plugin {
     }
     Optional<RegisteredServer> found = server.getAllServers().stream().filter((server) -> server.getServerInfo().getName().equals(name)).findFirst();
     if (found.isEmpty()) {
-      startServer(player, name);
+      return;
+    }
+    RegisteredServer destination = found.get();
+    if (IsServerOnline(destination)) {
+      e.setInitialServer(destination);
     } else {
-      e.setInitialServer(found.get());
+      startServer(player, name);
     }
   }
 
@@ -422,6 +426,22 @@ public class Plugin {
     builder.fireAndForget();
   }
 
+  private static boolean IsServerOnline(RegisteredServer server) {
+    CompletableFuture<ServerPing> ping = server.ping();
+    for (int i = 0; i < 100; i++) {
+      try {
+        ping.get(10, TimeUnit.MILLISECONDS);
+      } catch (TimeoutException timeoutException) {
+        continue;
+      } catch (Throwable e) {
+        // "Connection refused: /$(server ip):$(server port)" when the instance is offline
+        break;
+      }
+      return true;
+    }
+    return false;
+  }
+
   private void handlePortalChannelConnectCommandV0(ServerConnection connection, ByteArrayDataInput in) throws Throwable {
     String destinationServerName = in.readUTF();
     Player player = connection.getPlayer();
@@ -430,21 +450,12 @@ public class Plugin {
       return;
     }
     RegisteredServer dest = destination.get();
-    CompletableFuture<ServerPing> ping = dest.ping();
-    for (int i = 0; i < 100; i++) {
-      try {
-        ping.get(10, TimeUnit.MILLISECONDS);
-      } catch (TimeoutException timeoutException) {
-        continue;
-      } catch (ExecutionException e) {
-        // "Connection refused: /$(server ip):$(server port)" when the instance is offline
-        break;
-      }
+    if (IsServerOnline(dest)) {
       ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
       builder.fireAndForget();
-      return;
+    } else {
+      startServer(player, destinationServerName);
     }
-    startServer(player, destinationServerName);
   }
 
   private void startServer(Player player, String server) {
