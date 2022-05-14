@@ -121,9 +121,10 @@ public class Plugin {
     }
     Optional<RegisteredServer> found = server.getAllServers().stream().filter((server) -> server.getServerInfo().getName().equals(name)).findFirst();
     if (found.isEmpty()) {
-      return;
+      startServer(player, name);
+    } else {
+      e.setInitialServer(found.get());
     }
-    e.setInitialServer(found.get());
   }
 
   @Subscribe
@@ -426,5 +427,30 @@ public class Plugin {
     }
     ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
     builder.fireAndForget();
+  }
+
+  private void startServer(Player player, String server) {
+    Optional<String> maybeId = config.getInstanceId(server);
+    if (maybeId.isEmpty()) {
+      player.sendMessage(Component.text("Server \"" + server + "\" does not configured", TextColor.fromCSSHexString("red")), MessageType.SYSTEM);
+      return;
+    }
+    String id = maybeId.get();
+    final Logger logger = this.logger;
+    new Thread(() -> {
+      try {
+        new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id).start().wait();
+      } catch (Exception e) {
+        logger.error("aws ec2 start-instances failed");
+        return;
+      }
+      try {
+        new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id).start().wait();
+      } catch (Exception e) {
+        logger.error("aws ec2 wait instance-running failed");
+      }
+      logger.info("started ec2 instance " + id);
+    }).start();
+    player.sendMessage(Component.text("Server \"" + server + "\" is starting up. You will be transferred automatically as soon as it is ready"), MessageType.SYSTEM);
   }
 }

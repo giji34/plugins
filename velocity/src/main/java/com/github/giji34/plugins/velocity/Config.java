@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public class Config {
   private HashMap<String, Integer> rpcPorts = new HashMap<>();
+  private HashMap<String, String> instanceIds = new HashMap<>();
 
   public void load(File file) {
     try {
@@ -21,6 +22,7 @@ public class Config {
   private void unsafeLoad(File file) throws Exception {
     /*
     rpc[]=server:port
+    instance_id[]=i-aaaaaaaaaaaaaaaaa
     */
     BufferedReader br = new BufferedReader(new FileReader(file));
     String line;
@@ -39,6 +41,14 @@ public class Config {
         String server = s[0];
         int port = Integer.parseInt(s[1], 10);
         rpcPorts.put(server, port);
+      } else if (key.equals("instance_id[]")) {
+        String[] s = value.split(":");
+        if (s.length != 2) {
+          continue;
+        }
+        String server = s[0];
+        String id = s[1];
+        instanceIds.put(server, id);
       }
     }
   }
@@ -46,6 +56,14 @@ public class Config {
   public Optional<Integer> getRpcPort(String server) {
     if (rpcPorts.containsKey(server)) {
       return Optional.of(rpcPorts.get(server));
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  public Optional<String> getInstanceId(String server) {
+    if (instanceIds.containsKey(server)) {
+      return Optional.of(instanceIds.get(server));
     } else {
       return Optional.empty();
     }
