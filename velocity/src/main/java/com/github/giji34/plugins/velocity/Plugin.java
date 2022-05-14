@@ -20,6 +20,7 @@ import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.proxy.player.TabList;
 import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
+import com.velocitypowered.api.proxy.server.ServerPing;
 import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -34,7 +35,10 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class Plugin {
   private final ProxyServer server;
@@ -423,11 +427,24 @@ public class Plugin {
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
     if (destination.isEmpty()) {
-      startServer(player, destinationServerName);
-    } else {
+      return;
+    }
+    RegisteredServer dest = destination.get();
+    CompletableFuture<ServerPing> ping = dest.ping();
+    for (int i = 0; i < 100; i++) {
+      try {
+        ping.get(10, TimeUnit.MILLISECONDS);
+      } catch (TimeoutException timeoutException) {
+        continue;
+      } catch (ExecutionException e) {
+        // "Connection refused: /$(server ip):$(server port)" when the instance is offline
+        break;
+      }
       ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
       builder.fireAndForget();
+      return;
     }
+    startServer(player, destinationServerName);
   }
 
   private void startServer(Player player, String server) {
@@ -440,13 +457,17 @@ public class Plugin {
     final Logger logger = this.logger;
     new Thread(() -> {
       try {
-        new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id).start().wait();
+        ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id);
+        Process p = pb.start();
+        p.waitFor();
       } catch (Exception e) {
         logger.error("aws ec2 start-instances failed");
         return;
       }
       try {
-        new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id).start().wait();
+        ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id);
+        Process p = pb.start();
+        p.waitFor();
       } catch (Exception e) {
         logger.error("aws ec2 wait instance-running failed");
       }
