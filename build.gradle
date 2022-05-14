@@ -19,20 +19,11 @@ allprojects {
       url = 'https://oss.sonatype.org/content/groups/public/'
     }
     maven {
-      url = "https://oss.sonatype.org/content/repositories/releases"
-    }
-    maven {
       url = 'https://repo.mikeprimm.com/'
     }
     maven {
       name = 'viaversion-repo'
       url = 'https://repo.viaversion.com/'
-    }
-    maven {
-      url = "https://repo.maven.apache.org/maven2"
-    }
-    maven {
-      url = "https://repo.codemc.org/repository/maven-public/"
     }
   }
 
