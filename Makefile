@@ -1,10 +1,6 @@
 .PHONY: all
 all: shared spigot velocity
 
-.PHONY: dynmap
-dynmap:
-	(cd third_party/dynmap && ./gradlew build)
-
 .PHONY: spigot
 spigot: shared
 	./gradlew :spigot:build
@@ -20,3 +16,5 @@ clean:
 .PHONY: shared
 shared:
 	./gradlew :shared:build
+
+# jabba use $(cat .java-version)

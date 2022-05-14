@@ -8,6 +8,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.dynmap.DynmapAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +33,7 @@ public class EditCommand {
   private final JavaPlugin owner;
   private String snapshotServerHost;
   private int snapshotServerPort;
-  private final DynmapSupport dynmap;
+  private @Nullable DynmapAPI dynmap;
   private final BlockStateMapping mapping;
 
   static {
@@ -67,7 +68,7 @@ public class EditCommand {
     kTreeMaterials.add(Material.JUNGLE_LEAVES);
   }
 
-  public EditCommand(JavaPlugin owner, DynmapSupport dynmap, BlockStateMapping mapping) {
+  public EditCommand(JavaPlugin owner, @Nullable DynmapAPI dynmap, BlockStateMapping mapping) {
     this.owner = owner;
     this.dynmap = dynmap;
     this.mapping = mapping;

@@ -36,4 +36,4 @@ commands:
   hibernate:
   /:
     usage: // <block>
-depend: [dynmap, ViaVersion]
+depend: [ViaVersion]

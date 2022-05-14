@@ -23,12 +23,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
-import org.dynmap.DynmapCommonAPIListener;
+import org.dynmap.DynmapAPI;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.io.File;
@@ -47,7 +49,7 @@ public class Main extends JavaPlugin implements Listener {
   private Permission permission;
   private MobSpawnProhibiter mobSpawnProhibiter;
   private Borders borders;
-  private final DynmapSupport dynmap = new DynmapSupport();
+  private @Nullable DynmapAPI dynmap;
   private Hibernate hibernate;
   private BlockStateMapping blockStateMapping;
   private final Config config;
@@ -64,12 +66,17 @@ public class Main extends JavaPlugin implements Listener {
     File pluginDirectory = new File(jar.getParent(), "giji34");
 
     config = Config.Load(getLogger(), pluginDirectory);
+
+    for (Plugin p : getServer().getPluginManager().getPlugins()) {
+      if (p instanceof DynmapAPI) {
+        this.dynmap = (DynmapAPI)p;
+        break;
+      }
+    }
   }
 
   @Override
   public void onLoad() {
-    DynmapCommonAPIListener.register(this.dynmap);
-
     try {
       File jar = getFile();
       File pluginDirectory = new File(jar.getParent(), "giji34");
@@ -81,7 +88,7 @@ public class Main extends JavaPlugin implements Listener {
       this.portalCommand.init(pluginDirectory);
       this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
       this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
-      this.hibernate = new Hibernate(this, this.dynmap);
+      this.hibernate = new Hibernate(this);
       this.controllerService = new ControllerService(this, this.config.rpcPort);
     } catch (Exception e) {
       getLogger().warning("error: " + e);

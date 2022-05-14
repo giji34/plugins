@@ -11,11 +11,9 @@ public class Hibernate {
   private final JavaPlugin owner;
   private final long delayMillis = 1000L;
   private int taskId = -1;
-  private final DynmapSupport dynmap;
 
-  public Hibernate(JavaPlugin owner, DynmapSupport dynmap) {
+  public Hibernate(JavaPlugin owner) {
     this.owner = owner;
-    this.dynmap = dynmap;
   }
 
   public boolean enable() {
@@ -24,9 +22,6 @@ public class Hibernate {
     }
     this.taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(owner, () -> {
       if (!Bukkit.getServer().getOnlinePlayers().isEmpty()) {
-        return;
-      }
-      if (Bukkit.getWorlds().stream().anyMatch(dynmap::isRenderJobActive)) {
         return;
       }
       try {
