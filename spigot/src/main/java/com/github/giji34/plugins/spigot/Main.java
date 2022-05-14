@@ -18,6 +18,7 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -69,7 +70,7 @@ public class Main extends JavaPlugin implements Listener {
 
     for (Plugin p : getServer().getPluginManager().getPlugins()) {
       if (p instanceof DynmapAPI) {
-        this.dynmap = (DynmapAPI)p;
+        this.dynmap = (DynmapAPI) p;
         break;
       }
     }
@@ -878,5 +879,13 @@ public class Main extends JavaPlugin implements Listener {
     if (!sheep.isSheared()) {
       e.setCancelled(true);
     }
+  }
+
+  @EventHandler
+  public void onServerLoad(ServerLoadEvent e) {
+    if (e.getType() != ServerLoadEvent.LoadType.STARTUP) {
+      return;
+    }
+    controllerService.setServerReady();
   }
 }

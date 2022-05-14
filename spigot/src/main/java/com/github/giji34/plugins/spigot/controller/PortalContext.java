@@ -3,9 +3,7 @@ package com.github.giji34.plugins.spigot.controller;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.UUID;
 
 public class PortalContext implements HttpHandler {
@@ -27,6 +25,8 @@ public class PortalContext implements HttpHandler {
     String path = fullPath.substring(kPath.length());
     if (method.equalsIgnoreCase("post") && path.equalsIgnoreCase("reserve_spawn_location")) {
       handleReserveSpawnLocation(exchange);
+    } else if (method.equalsIgnoreCase("get") && path.equalsIgnoreCase("is_ready")) {
+      handleIsReady(exchange);
     } else {
       ControllerService.CloseHttpExchange(exchange, 404);
     }
@@ -55,5 +55,16 @@ public class PortalContext implements HttpHandler {
     UUID uuid = UUID.fromString(uuidString);
     service.reserveSpawnLocation(uuid, dimension, x, y, z, yaw);
     ControllerService.CloseHttpExchange(t, 200);
+  }
+
+  private void handleIsReady(HttpExchange t) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(buffer);
+    dos.writeBoolean(service.isServerReady());
+    dos.close();
+    t.sendResponseHeaders(200, buffer.size());
+    OutputStream os = t.getResponseBody();
+    os.write(buffer.toByteArray());
+    os.close();
   }
 }

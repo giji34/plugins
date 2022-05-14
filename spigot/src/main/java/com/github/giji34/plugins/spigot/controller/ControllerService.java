@@ -28,6 +28,7 @@ public class ControllerService {
   private AtomicInteger autosaveSuspentionTicket = new AtomicInteger(0);
   private AtomicBoolean needsBackup = new AtomicBoolean(false);
   private final StatisticsContext statisticsContext;
+  private final AtomicBoolean serverReady = new AtomicBoolean(false);
 
   public ControllerService(JavaPlugin owner, int port) {
     this.owner = owner;
@@ -120,5 +121,13 @@ public class ControllerService {
     t.sendResponseHeaders(status, 0);
     OutputStream os = t.getResponseBody();
     os.close();
+  }
+
+  public void setServerReady() {
+    serverReady.set(true);
+  }
+
+  public boolean isServerReady() {
+    return serverReady.get();
   }
 }
