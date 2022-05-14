@@ -9,30 +9,28 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 class BackupService {
-  private final Path gbackupDirectory;
-  private final Path gitDirectory;
-  private final Path serverRootDirectory;
+  private final String gbackupDirectory;
+  private final String gitDirectory;
+  private final String serverRootDirectory;
   private final JavaPlugin owner;
   private final AtomicBoolean needsBackup = new AtomicBoolean(false);
 
   static final int kBackupIntervalMinutes = 15;
 
   BackupService(Path gbackupDirectory, Path gitDirectory, JavaPlugin owner) {
-    this.gbackupDirectory = gbackupDirectory.toAbsolutePath();
-    this.gitDirectory = gitDirectory.toAbsolutePath();
-    this.serverRootDirectory = owner.getDataFolder().getParentFile().getParentFile().toPath().toAbsolutePath();
+    this.gbackupDirectory = gbackupDirectory.toAbsolutePath().toString();
+    this.gitDirectory = gitDirectory.toAbsolutePath().toString();
+    this.serverRootDirectory = owner.getDataFolder().getParentFile().getParentFile().toPath().toAbsolutePath().toString();
     this.owner = owner;
 
-    owner.getServer().getScheduler()
-      .scheduleSyncDelayedTask(owner, this::timerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
+    schedule();
   }
 
   void timerCallback() {
     long numPlayers = owner.getServer().getOnlinePlayers().size();
     new Thread(() -> {
       if (!needsBackup.get()) {
-        owner.getServer().getScheduler()
-          .scheduleSyncDelayedTask(owner, this::timerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
+        schedule();
         return;
       }
 
@@ -43,9 +41,9 @@ class BackupService {
       try {
         ProcessBuilder pb = new ProcessBuilder(
           "bash",
-          Path.of(gbackupDirectory.toString(), "backup").toString(),
-          serverRootDirectory.toString(),
-          gitDirectory.toString(),
+          Path.of(gbackupDirectory, "backup").toString(),
+          serverRootDirectory,
+          gitDirectory,
           commitMessage);
         pb.redirectErrorStream(true);
         Process p = pb.start();
@@ -56,12 +54,16 @@ class BackupService {
         e.printStackTrace();
       }
 
-      owner.getServer().getScheduler()
-        .scheduleSyncDelayedTask(owner, this::timerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
+      schedule();
     }).start();
   }
 
   void setNeedsBackup() {
     needsBackup.set(true);
+  }
+
+  private void schedule() {
+    owner.getServer().getScheduler()
+      .scheduleSyncDelayedTask(owner, this::timerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
   }
 }
