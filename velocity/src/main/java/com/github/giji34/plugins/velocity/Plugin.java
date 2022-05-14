@@ -423,10 +423,11 @@ public class Plugin {
     Player player = connection.getPlayer();
     Optional<RegisteredServer> destination = server.getServer(destinationServerName);
     if (destination.isEmpty()) {
-      return;
+      startServer(player, destinationServerName);
+    } else {
+      ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
+      builder.fireAndForget();
     }
-    ConnectionRequestBuilder builder = player.createConnectionRequest(destination.get());
-    builder.fireAndForget();
   }
 
   private void startServer(Player player, String server) {
