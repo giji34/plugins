@@ -24,10 +24,12 @@ import com.velocitypowered.api.proxy.server.ServerPing;
 import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -36,7 +38,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -48,6 +49,8 @@ public class Plugin {
   Path configPaths;
   private final HashSet<UUID> members = new HashSet<>();
   private Config config;
+  private final HashMap<UUID, String> playersAwaitingServer = new HashMap<>();
+  private @Nullable Thread isReadyPollWorker;
 
   @Inject
   public Plugin(ProxyServer server, Logger logger, @DataDirectory Path configPaths) {
@@ -73,6 +76,7 @@ public class Plugin {
       TabList list = player.getTabList();
       list.removeEntry(left.getUniqueId());
     }
+    playersAwaitingServer.remove(left.getUniqueId());
   }
 
   @Subscribe
@@ -85,6 +89,12 @@ public class Plugin {
       .delay(1, TimeUnit.SECONDS)
       .schedule();
     server.getChannelRegistrar().register(MinecraftChannelIdentifier.from(ChannelNames.kSpigotPluginChannel));
+    server
+      .getScheduler()
+      .buildTask(this, this::pollServerReady)
+      .repeat(1, TimeUnit.SECONDS)
+      .delay(1500, TimeUnit.MILLISECONDS)
+      .schedule();
   }
 
   @Subscribe
@@ -377,7 +387,7 @@ public class Plugin {
     String destinationServerName = in.readUTF();
     Optional<Integer> maybeRpcPort = this.config.getRpcPort(destinationServerName);
     if (maybeRpcPort.isEmpty()) {
-      logger.warn("rpc port unknonw for server: " + destinationServerName);
+      logger.warn("rpc port unknown for server: " + destinationServerName);
       return;
     }
     int rpcPort = maybeRpcPort.get();
@@ -428,9 +438,9 @@ public class Plugin {
 
   private static boolean IsServerOnline(RegisteredServer server) {
     CompletableFuture<ServerPing> ping = server.ping();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
       try {
-        ping.get(10, TimeUnit.MILLISECONDS);
+        ping.get(100, TimeUnit.MILLISECONDS);
       } catch (TimeoutException timeoutException) {
         continue;
       } catch (Throwable e) {
@@ -485,5 +495,86 @@ public class Plugin {
       logger.info("started ec2 instance " + id);
     }).start();
     player.sendMessage(Component.text("Server \"" + server + "\" is starting up. You will be transferred automatically as soon as it is ready"), MessageType.SYSTEM);
+    playersAwaitingServer.put(player.getUniqueId(), server);
+  }
+
+  private void pollServerReady() {
+    if (playersAwaitingServer.isEmpty()) {
+      return;
+    }
+    if (isReadyPollWorker != null) {
+      return;
+    }
+    final HashMap<String, Integer> servers = new HashMap<>();
+    for (String server : playersAwaitingServer.values()) {
+      Optional<Integer> maybeRpcPort = this.config.getRpcPort(server);
+      if (maybeRpcPort.isEmpty()) {
+        logger.warn("rpc port unknown for server: " + server);
+        continue;
+      }
+      servers.put(server, maybeRpcPort.get());
+    }
+    (isReadyPollWorker = new Thread(() -> {
+      HashSet<String> readyServerNames = new HashSet<>();
+      for (String server : servers.keySet()) {
+        int rpcPort = servers.get(server);
+        Optional<RegisteredServer> destination = this.server.getServer(server);
+        if (destination.isEmpty()) {
+          return;
+        }
+        InetSocketAddress address = destination.get().getServerInfo().getAddress();
+
+        String url = "http://" + address.getAddress().getHostAddress() + ":" + rpcPort + "/portal/is_ready";
+
+        HttpClient client = HttpClient.newBuilder()
+          .version(HttpClient.Version.HTTP_1_1)
+          .followRedirects(HttpClient.Redirect.NORMAL)
+          .connectTimeout(Duration.ofSeconds(10))
+          .build();
+        HttpRequest request = HttpRequest.newBuilder()
+          .uri(URI.create(url))
+          .GET()
+          .build();
+        try {
+          HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+          DataInputStream dis = new DataInputStream(response.body());
+          boolean ready = dis.readBoolean();
+          if (ready) {
+            readyServerNames.add(server);
+          }
+        } catch (Throwable e) {
+          logger.warn(e.toString());
+        }
+      }
+
+      this.server.getScheduler().buildTask(this, () -> {
+        for (String readyServerName : readyServerNames) {
+          Optional<RegisteredServer> maybeReadyServer = this.server.getServer(readyServerName);
+          if (maybeReadyServer.isEmpty()) {
+            continue;
+          }
+          RegisteredServer readyServer = maybeReadyServer.get();
+
+          for (UUID id : playersAwaitingServer.keySet()) {
+            String awaitingServerName = playersAwaitingServer.get(id);
+            if (!readyServerName.equals(awaitingServerName)) {
+              continue;
+            }
+            Optional<Player> maybePlayer = this.server.getPlayer(id);
+            if (maybePlayer.isEmpty()) {
+              continue;
+            }
+            Player player = maybePlayer.get();
+            player.sendMessage(Component.text("Server \"" + awaitingServerName + "\" is ready").color(TextColor.fromCSSHexString("cyan")));
+            ConnectionRequestBuilder builder = player.createConnectionRequest(readyServer);
+            builder.fireAndForget();
+
+            playersAwaitingServer.remove(id);
+          }
+        }
+
+        this.isReadyPollWorker = null;
+      }).delay(0, TimeUnit.SECONDS).schedule();
+    })).start();
   }
 }
