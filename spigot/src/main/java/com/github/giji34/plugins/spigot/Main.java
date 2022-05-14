@@ -61,6 +61,7 @@ public class Main extends JavaPlugin implements Listener {
   private ControllerService controllerService;
 
   private final DebugStick debugStick = new DebugStick();
+  private BackupService backupService;
 
   public Main() {
     File jar = getFile();
@@ -91,6 +92,7 @@ public class Main extends JavaPlugin implements Listener {
       this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
       this.hibernate = new Hibernate(this);
       this.controllerService = new ControllerService(this, this.config.rpcPort);
+      this.backupService = new BackupService(config.gbackupToolDirectory, config.gbackupGitDirectoyr, this);
     } catch (Exception e) {
       getLogger().warning("error: " + e);
     }
@@ -497,6 +499,7 @@ public class Main extends JavaPlugin implements Listener {
     addPotionEffects(player);
     notifyOp(player);
     this.playerActivity.put(player.getUniqueId(), LocalDateTime.now());
+    this.backupService.onPlayerJoin();
 
     if (this.permission.hasRole(player, "member")) {
       portalCommand.setAnyPortalCooldown(player);
@@ -590,6 +593,7 @@ public class Main extends JavaPlugin implements Listener {
     this.borders.forget(player);
     this.editCommand.forget(player);
     this.debugStick.forget(player);
+    this.backupService.onPlayerQuit();
   }
 
   private boolean handleConnectCommand(Player player, String[] args) {
