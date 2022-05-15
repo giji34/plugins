@@ -94,6 +94,8 @@ public class Main extends JavaPlugin implements Listener {
       this.controllerService = new ControllerService(this, this.config.rpcPort);
       if (new File(config.gbackupToolDirectory).isDirectory() && new File(config.gbackupGitDirectory).isDirectory()) {
         this.backupService = new BackupService(config.gbackupToolDirectory, config.gbackupGitDirectory, this);
+      } else {
+        getLogger().info("backup service is disabled because backup directory is not configured.");
       }
     } catch (Exception e) {
       getLogger().warning("error: " + e);
@@ -156,8 +158,9 @@ public class Main extends JavaPlugin implements Listener {
     getServer().getMessenger().registerOutgoingPluginChannel(this, ChannelNames.kSpigotPluginChannel);
     getServer().getPluginManager().registerEvents(this, this);
 
-    hibernate.enable();
-    if (backupService != null) {
+    if (backupService == null) {
+      hibernate.enable();
+    } else {
       backupService.onEnable();
     }
 
