@@ -64,6 +64,10 @@ class BackupService {
     }).start();
   }
 
+  private long ServerTicksFromMinutes(int minutes) {
+    return TimeUnit.MINUTES.toMillis(minutes) / 50;
+  }
+
   private void schedule() {
     if (backupTimerTask.isPresent()) {
       owner.getServer().getScheduler().cancelTask(backupTimerTask.get());
@@ -73,7 +77,7 @@ class BackupService {
       return;
     }
     int taskId = owner.getServer().getScheduler()
-      .scheduleSyncDelayedTask(owner, this::timerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
+      .scheduleSyncDelayedTask(owner, this::timerCallback, ServerTicksFromMinutes(kBackupIntervalMinutes));
     backupTimerTask = Optional.of(taskId);
 
   void onEnable() {
@@ -102,7 +106,7 @@ class BackupService {
       shutdownTimerTask = Optional.empty();
     }
     int taskId = owner.getServer().getScheduler()
-      .scheduleSyncDelayedTask(owner, this::onShutdownTimerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
+      .scheduleSyncDelayedTask(owner, this::onShutdownTimerCallback, ServerTicksFromMinutes(kBackupIntervalMinutes));
     shutdownTimerTask = Optional.of(taskId);
   }
 
