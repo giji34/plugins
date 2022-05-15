@@ -50,7 +50,10 @@ class BackupService {
           commitMessage);
         pb.redirectErrorStream(true);
         Process p = pb.start();
-        p.waitFor();
+        int code = p.waitFor();
+        if (code != 0) {
+          owner.getLogger().warning("backup script exit with code: " + code);
+        }
 
         needsBackup.set(false);
       } catch (Throwable e) {
