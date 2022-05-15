@@ -51,6 +51,8 @@ public class Plugin {
   private Config config;
   private final HashMap<UUID, String> playersAwaitingServer = new HashMap<>();
   private @Nullable Thread isReadyPollWorker;
+  private final HashSet<String> runningServers = new HashSet<>();
+  private @Nullable Thread isRunningPollWorker;
 
   @Inject
   public Plugin(ProxyServer server, Logger logger, @DataDirectory Path configPaths) {
@@ -93,7 +95,13 @@ public class Plugin {
       .getScheduler()
       .buildTask(this, this::pollServerReady)
       .repeat(1, TimeUnit.SECONDS)
-      .delay(1500, TimeUnit.MILLISECONDS)
+      .delay(1333, TimeUnit.MILLISECONDS)
+      .schedule();
+    server
+      .getScheduler()
+      .buildTask(this, this::shutdownOfflineServers)
+      .repeat(1, TimeUnit.SECONDS)
+      .repeat(1666, TimeUnit.MILLISECONDS)
       .schedule();
   }
 
@@ -520,11 +528,12 @@ public class Plugin {
       HashSet<String> readyServerNames = new HashSet<>();
       for (String server : servers.keySet()) {
         int rpcPort = servers.get(server);
-        Optional<RegisteredServer> destination = this.server.getServer(server);
-        if (destination.isEmpty()) {
+        Optional<RegisteredServer> maybeDestination = this.server.getServer(server);
+        if (maybeDestination.isEmpty()) {
           return;
         }
-        InetSocketAddress address = destination.get().getServerInfo().getAddress();
+        RegisteredServer destination = maybeDestination.get();
+        InetSocketAddress address = destination.getServerInfo().getAddress();
 
         String url = "http://" + address.getAddress().getHostAddress() + ":" + rpcPort + "/portal/is_ready";
 
@@ -556,6 +565,9 @@ public class Plugin {
           }
           RegisteredServer readyServer = maybeReadyServer.get();
 
+          logger.info(readyServerName + " is now online");
+          runningServers.add(readyServerName);
+
           for (UUID id : playersAwaitingServer.keySet()) {
             String awaitingServerName = playersAwaitingServer.get(id);
             if (!readyServerName.equals(awaitingServerName)) {
@@ -575,6 +587,75 @@ public class Plugin {
         }
 
         this.isReadyPollWorker = null;
+      }).delay(0, TimeUnit.SECONDS).schedule();
+    })).start();
+  }
+
+  private void shutdownOfflineServers() {
+    if (this.runningServers.isEmpty()) {
+      return;
+    }
+    if (isRunningPollWorker != null) {
+      return;
+    }
+    HashSet<String> runningServers = new HashSet<>(this.runningServers);
+    HashSet<String> offlineServers = new HashSet<>();
+    (isRunningPollWorker = new Thread(() -> {
+      for (String serverName : runningServers) {
+        Optional<RegisteredServer> maybeServer = this.server.getServer(serverName);
+        if (maybeServer.isEmpty()) {
+          logger.error(serverName + " is not configured");
+          continue;
+        }
+        RegisteredServer server = maybeServer.get();
+        if (IsServerOnline(server)) {
+          continue;
+        }
+        offlineServers.add(serverName);
+      }
+      for (String offlineServerName : offlineServers) {
+        Optional<String> maybeId = config.getInstanceId(offlineServerName);
+        if (maybeId.isEmpty()) {
+          logger.error(offlineServerName + " is not configured");
+          continue;
+        }
+        String id = maybeId.get();
+        try {
+          logger.info("aws ec2 stop-instances");
+          ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "stop-instances", "--instance-ids", id);
+          Process p = pb.start();
+          int code = p.waitFor();
+          if (code != 0) {
+            logger.warn("aws ec2 stop-instances failed with code: " + code);
+            continue;
+          }
+        } catch (Throwable e) {
+          logger.warn("aws ec2 stop-instances failed: " + e.getMessage());
+          e.printStackTrace();
+        }
+        try {
+          logger.info("aws ec2 instance-stopped");
+          ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "instance-stopped", "--instance", id);
+          Process p = pb.start();
+          int code = p.waitFor();
+          if (code != 0) {
+            logger.warn("aws ec2 instance-stopped failed with code: " + code);
+          }
+        } catch (Throwable e) {
+          logger.warn("aws ec2 instance-stopped failed: " + e.getMessage());
+          e.printStackTrace();
+        }
+      }
+
+      this.server.getScheduler().buildTask(this, () -> {
+        for (String offlineServer : offlineServers) {
+          if (!this.runningServers.contains(offlineServer)) {
+            continue;
+          }
+          logger.info(offlineServer + " is now offline");
+          this.runningServers.remove(offlineServer);
+        }
+        this.isRunningPollWorker = null;
       }).delay(0, TimeUnit.SECONDS).schedule();
     })).start();
   }
