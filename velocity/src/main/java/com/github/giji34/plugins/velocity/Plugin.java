@@ -34,6 +34,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
@@ -603,15 +604,32 @@ public class Plugin {
     (isRunningPollWorker = new Thread(() -> {
       for (String serverName : runningServers) {
         Optional<RegisteredServer> maybeServer = this.server.getServer(serverName);
-        if (maybeServer.isEmpty()) {
+        Optional<String> remoteStatusFile = this.config.getServerStatusFile(serverName);
+        if (maybeServer.isEmpty() || remoteStatusFile.isEmpty()) {
           logger.error(serverName + " is not configured");
           continue;
         }
         RegisteredServer server = maybeServer.get();
-        if (IsServerOnline(server)) {
-          continue;
+        InetSocketAddress address = server.getServerInfo().getAddress();
+        String hostAddress = address.getAddress().getHostAddress();
+        try {
+          ProcessBuilder pb = new ProcessBuilder("ssh", hostAddress, "cat", remoteStatusFile.get());
+          pb.redirectErrorStream(true);
+          Process p = pb.start();
+          int code = p.waitFor();
+          if (code != 0) {
+            logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+            continue;
+          }
+          InputStream is = p.getInputStream();
+          String response = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+          if (response.equals("stopped")) {
+            offlineServers.add(serverName);
+          }
+        } catch (Throwable e) {
+          logger.error("ssh failed: " + e.getMessage());
+          e.printStackTrace();
         }
-        offlineServers.add(serverName);
       }
       for (String offlineServerName : offlineServers) {
         Optional<String> maybeId = config.getInstanceId(offlineServerName);
@@ -635,7 +653,7 @@ public class Plugin {
         }
         try {
           logger.info("aws ec2 instance-stopped");
-          ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "instance-stopped", "--instance", id);
+          ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-stopped", "--instance", id);
           Process p = pb.start();
           int code = p.waitFor();
           if (code != 0) {

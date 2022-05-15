@@ -7,8 +7,9 @@ import java.util.HashMap;
 import java.util.Optional;
 
 public class Config {
-  private HashMap<String, Integer> rpcPorts = new HashMap<>();
-  private HashMap<String, String> instanceIds = new HashMap<>();
+  private final HashMap<String, Integer> rpcPorts = new HashMap<>();
+  private final HashMap<String, String> instanceIds = new HashMap<>();
+  private final HashMap<String, String> serverStatusFiles = new HashMap<>();
 
   public void load(File file) {
     try {
@@ -22,7 +23,8 @@ public class Config {
   private void unsafeLoad(File file) throws Exception {
     /*
     rpc[]=server:port
-    instance_id[]=i-aaaaaaaaaaaaaaaaa
+    instance_id[]=server:i-aaaaaaaaaaaaaaaaa
+    server_status_file[]=server:path_to_status_file
     */
     BufferedReader br = new BufferedReader(new FileReader(file));
     String line;
@@ -49,6 +51,14 @@ public class Config {
         String server = s[0];
         String id = s[1];
         instanceIds.put(server, id);
+      } else if (key.equals("server_status_file[]")) {
+        String[] s = value.split(":");
+        if (s.length != 2) {
+          continue;
+        }
+        String server = s[0];
+        String statusFile = s[1];
+        serverStatusFiles.put(server, statusFile);
       }
     }
   }
@@ -64,6 +74,14 @@ public class Config {
   public Optional<String> getInstanceId(String server) {
     if (instanceIds.containsKey(server)) {
       return Optional.of(instanceIds.get(server));
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  public Optional<String> getServerStatusFile(String server) {
+    if (serverStatusFiles.containsKey(server)) {
+      return Optional.of(serverStatusFiles.get(server));
     } else {
       return Optional.empty();
     }
