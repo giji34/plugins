@@ -157,6 +157,9 @@ public class Main extends JavaPlugin implements Listener {
     getServer().getPluginManager().registerEvents(this, this);
 
     hibernate.enable();
+    if (backupService != null) {
+      backupService.onEnable();
+    }
 
     this.startPlayerActivityWatchdog();
     this.setupGameRules();

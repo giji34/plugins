@@ -25,8 +25,6 @@ class BackupService {
     this.gitDirectory = gitDirectory;
     this.serverRootDirectory = owner.getDataFolder().getParentFile().getParentFile().toPath().toAbsolutePath().toString();
     this.owner = owner;
-
-    schedule();
   }
 
   void timerCallback() {
@@ -75,6 +73,9 @@ class BackupService {
     int taskId = owner.getServer().getScheduler()
       .scheduleSyncDelayedTask(owner, this::timerCallback, TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes));
     backupTimerTask = Optional.of(taskId);
+
+  void onEnable() {
+    schedule();
   }
 
   void onPlayerJoin() {
