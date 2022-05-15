@@ -14,7 +14,7 @@ public class Config {
   public final String[] monitoringFilesystemMountPoints;
   public final int rpcPort;
   public final String gbackupToolDirectory;
-  public final String gbackupGitDirectoyr;
+  public final String gbackupGitDirectory;
 
   private Config(
     String snapshotServerHost,
@@ -23,14 +23,14 @@ public class Config {
     String[] monitoringFilesystemMountPoints,
     int rpcPort,
     String gbackupToolDirectory,
-    String gbackupGitDirectoyr) {
+    String gbackupGitDirectory) {
     this.snapshotServerHost = snapshotServerHost;
     this.snapshotServerPort = snapshotServerPort;
     this.isSightSeeing = isSightSeeing;
     this.monitoringFilesystemMountPoints = monitoringFilesystemMountPoints;
     this.rpcPort = rpcPort;
     this.gbackupToolDirectory = gbackupToolDirectory;
-    this.gbackupGitDirectoyr = gbackupGitDirectoyr;
+    this.gbackupGitDirectory = gbackupGitDirectory;
   }
 
   static Config Load(Logger logger, File pluginDirectory) {

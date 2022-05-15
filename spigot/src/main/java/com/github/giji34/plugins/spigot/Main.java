@@ -61,7 +61,7 @@ public class Main extends JavaPlugin implements Listener {
   private ControllerService controllerService;
 
   private final DebugStick debugStick = new DebugStick();
-  private BackupService backupService;
+  private @Nullable BackupService backupService;
 
   public Main() {
     File jar = getFile();
@@ -92,7 +92,9 @@ public class Main extends JavaPlugin implements Listener {
       this.borders = new Borders(new File(pluginDirectory, "borders.yml"));
       this.hibernate = new Hibernate(this);
       this.controllerService = new ControllerService(this, this.config.rpcPort);
-      this.backupService = new BackupService(config.gbackupToolDirectory, config.gbackupGitDirectoyr, this);
+      if (new File(config.gbackupToolDirectory).isDirectory() && new File(config.gbackupGitDirectory).isDirectory()) {
+        this.backupService = new BackupService(config.gbackupToolDirectory, config.gbackupGitDirectory, this);
+      }
     } catch (Exception e) {
       getLogger().warning("error: " + e);
     }
@@ -499,7 +501,9 @@ public class Main extends JavaPlugin implements Listener {
     addPotionEffects(player);
     notifyOp(player);
     this.playerActivity.put(player.getUniqueId(), LocalDateTime.now());
-    this.backupService.onPlayerJoin();
+    if (this.backupService != null) {
+      this.backupService.onPlayerJoin();
+    }
 
     if (this.permission.hasRole(player, "member")) {
       portalCommand.setAnyPortalCooldown(player);
@@ -593,7 +597,9 @@ public class Main extends JavaPlugin implements Listener {
     this.borders.forget(player);
     this.editCommand.forget(player);
     this.debugStick.forget(player);
-    this.backupService.onPlayerQuit();
+    if (this.backupService != null) {
+      this.backupService.onPlayerQuit();
+    }
   }
 
   private boolean handleConnectCommand(Player player, String[] args) {
