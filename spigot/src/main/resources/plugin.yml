@@ -37,3 +37,4 @@ commands:
   /:
     usage: // <block>
 depend: [ViaVersion]
+softdepend: [dynmap]
