@@ -200,7 +200,7 @@ public class Plugin {
   private static boolean IsInSameServer(Player a, Player b) {
     Optional<ServerConnection> serverA = a.getCurrentServer();
     Optional<ServerConnection> serverB = b.getCurrentServer();
-    if (!serverA.isPresent() || !serverB.isPresent()) {
+    if (serverA.isEmpty() || serverB.isEmpty()) {
       return false;
     }
     String nameA = serverA.get().getServerInfo().getName();
@@ -226,7 +226,7 @@ public class Plugin {
           continue;
         }
         Optional<UUID> uuid = UuidFromString(columns[0]);
-        if (!uuid.isPresent()) {
+        if (uuid.isEmpty()) {
           continue;
         }
         loaded.add(uuid.get());
@@ -265,7 +265,7 @@ public class Plugin {
           continue;
         }
         Optional<UUID> uuid = UuidFromString(columns[0]);
-        if (!uuid.isPresent()) {
+        if (uuid.isEmpty()) {
           continue;
         }
         if (!this.members.contains(uuid.get())) {
@@ -478,6 +478,7 @@ public class Plugin {
     final Logger logger = this.logger;
     new Thread(() -> {
       try {
+        logger.info("aws ec2 start-instances");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id);
         Process p = pb.start();
         p.waitFor();
@@ -486,6 +487,7 @@ public class Plugin {
         return;
       }
       try {
+        logger.info("aws ec2 instance-running");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id);
         Process p = pb.start();
         p.waitFor();
@@ -542,8 +544,7 @@ public class Plugin {
           if (ready) {
             readyServerNames.add(server);
           }
-        } catch (Throwable e) {
-          logger.warn(e.toString());
+        } catch (Throwable ignored) {
         }
       }
 
