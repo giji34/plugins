@@ -2,6 +2,7 @@ package com.github.giji34.plugins.spigot;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -23,7 +24,8 @@ class BackupService {
   BackupService(String gbackupDirectory, String gitDirectory, JavaPlugin owner) {
     this.gbackupDirectory = gbackupDirectory;
     this.gitDirectory = gitDirectory;
-    this.serverRootDirectory = owner.getDataFolder().getParentFile().getParentFile().toPath().toAbsolutePath().toString();
+    File dataFolder = owner.getDataFolder().getAbsoluteFile();
+    this.serverRootDirectory = dataFolder.getParentFile().getParentFile().getAbsolutePath();
     this.owner = owner;
   }
 
