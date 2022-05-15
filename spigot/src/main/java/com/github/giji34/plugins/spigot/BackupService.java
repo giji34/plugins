@@ -1,12 +1,14 @@
 package com.github.giji34.plugins.spigot;
 
+import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -16,8 +18,8 @@ class BackupService {
   private final String serverRootDirectory;
   private final JavaPlugin owner;
   private final AtomicBoolean needsBackup = new AtomicBoolean(false);
-  private Optional<Integer> shutdownTimerTask = Optional.empty();
-  private Optional<Integer> backupTimerTask = Optional.empty();
+  private @Nullable Integer backupTimerTask = null;
+  private @Nullable Long lastPlayerQuitTimeMillis = null;
 
   static final int kBackupIntervalMinutes = 15;
 
@@ -32,6 +34,18 @@ class BackupService {
   void timerCallback() {
     long numPlayers = owner.getServer().getOnlinePlayers().size();
     new Thread(() -> {
+      if (lastPlayerQuitTimeMillis != null) {
+        long elapsedMillis = System.currentTimeMillis() - lastPlayerQuitTimeMillis;
+        if (elapsedMillis >= TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes)) {
+          owner.getLogger().info(elapsedMillis / 1000.0 + " seconds elapsed after last player quit. Schedule shutting down the server");
+          lastPlayerQuitTimeMillis = null;
+          owner.getServer().getScheduler().scheduleSyncDelayedTask(owner, () -> {
+            // backup should be done after shutdown, typically on the last lines of server startup script
+            owner.getServer().shutdown();
+          }, 0);
+          return;
+        }
+      }
       if (!needsBackup.get()) {
         schedule();
         return;
@@ -69,50 +83,31 @@ class BackupService {
   }
 
   private void schedule() {
-    if (backupTimerTask.isPresent()) {
-      owner.getServer().getScheduler().cancelTask(backupTimerTask.get());
-      backupTimerTask = Optional.empty();
-    }
-    if (shutdownTimerTask.isPresent()) {
-      return;
+    if (backupTimerTask != null) {
+      owner.getServer().getScheduler().cancelTask(backupTimerTask);
+      backupTimerTask = null;
     }
     int taskId = owner.getServer().getScheduler()
       .scheduleSyncDelayedTask(owner, this::timerCallback, ServerTicksFromMinutes(kBackupIntervalMinutes));
-    backupTimerTask = Optional.of(taskId);
+    backupTimerTask = taskId;
+  }
 
   void onEnable() {
+    lastPlayerQuitTimeMillis = System.currentTimeMillis();
     schedule();
   }
 
   void onPlayerJoin() {
     needsBackup.set(true);
-    if (shutdownTimerTask.isPresent()) {
-      int taskId = shutdownTimerTask.get();
-      owner.getServer().getScheduler().cancelTask(taskId);
-      shutdownTimerTask = Optional.empty();
-
-      schedule();
-    }
+    lastPlayerQuitTimeMillis = null;
   }
 
-  void onPlayerQuit() {
-    int numPlayers = owner.getServer().getOnlinePlayers().size();
+  void onPlayerQuit(PlayerQuitEvent e) {
+    Player quitPlayer = e.getPlayer();
+    long numPlayers = owner.getServer().getOnlinePlayers().stream().filter(it -> !it.getUniqueId().equals(quitPlayer.getUniqueId())).count();
     if (numPlayers > 0) {
       return;
     }
-    if (shutdownTimerTask.isPresent()) {
-      int id = shutdownTimerTask.get();
-      owner.getServer().getScheduler().cancelTask(id);
-      shutdownTimerTask = Optional.empty();
-    }
-    int taskId = owner.getServer().getScheduler()
-      .scheduleSyncDelayedTask(owner, this::onShutdownTimerCallback, ServerTicksFromMinutes(kBackupIntervalMinutes));
-    shutdownTimerTask = Optional.of(taskId);
-  }
-
-  void onShutdownTimerCallback() {
-    owner.getServer().shutdown();
-
-    // backup should be done after shutdown, typically on the last lines of server startup script
+    lastPlayerQuitTimeMillis = System.currentTimeMillis();
   }
 }

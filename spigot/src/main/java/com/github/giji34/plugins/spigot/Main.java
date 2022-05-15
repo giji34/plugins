@@ -604,7 +604,7 @@ public class Main extends JavaPlugin implements Listener {
     this.editCommand.forget(player);
     this.debugStick.forget(player);
     if (this.backupService != null) {
-      this.backupService.onPlayerQuit();
+      this.backupService.onPlayerQuit(event);
     }
   }
 
