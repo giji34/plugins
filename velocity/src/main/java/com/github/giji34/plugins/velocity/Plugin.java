@@ -487,7 +487,7 @@ public class Plugin {
     final Logger logger = this.logger;
     new Thread(() -> {
       try {
-        logger.info("aws ec2 start-instances");
+        logger.info("start ec2 instance " + id + " (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id);
         Process p = pb.start();
         p.waitFor();
@@ -496,14 +496,14 @@ public class Plugin {
         return;
       }
       try {
-        logger.info("aws ec2 instance-running");
+        logger.info("waiting ec2 instance running " + id + " (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id);
         Process p = pb.start();
         p.waitFor();
       } catch (Exception e) {
         logger.error("aws ec2 wait instance-running failed");
       }
-      logger.info("started ec2 instance " + id);
+      logger.info("ec2 instance started " + id + " (" + server + ") ...");
     }).start();
     player.sendMessage(Component.text("Server \"" + server + "\" is starting up. You will be transferred automatically as soon as it is ready"), MessageType.SYSTEM);
     playersAwaitingServer.put(player.getUniqueId(), server);
@@ -623,13 +623,34 @@ public class Plugin {
           }
           InputStream is = p.getInputStream();
           String response = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
-          if (response.equals("stopped")) {
-            offlineServers.add(serverName);
+          if (!response.equals("stopped")) {
+            continue;
           }
         } catch (Throwable e) {
           logger.error("ssh failed: " + e.getMessage());
           e.printStackTrace();
         }
+
+        try {
+          ProcessBuilder pb = new ProcessBuilder("ssh", hostAddress, "bash -c \"users | wc -w\"");
+          pb.redirectErrorStream(true);
+          Process p = pb.start();
+          int code = p.waitFor();
+          if (code != 0) {
+            logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+            continue;
+          }
+          InputStream is = p.getInputStream();
+          String response = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+          if (!response.equals("0")) {
+            continue;
+          }
+        } catch (Throwable e) {
+          logger.error("ssh failed: " + e.getMessage());
+          e.printStackTrace();
+        }
+
+        offlineServers.add(serverName);
       }
       for (String offlineServerName : offlineServers) {
         Optional<String> maybeId = config.getInstanceId(offlineServerName);
@@ -639,7 +660,7 @@ public class Plugin {
         }
         String id = maybeId.get();
         try {
-          logger.info("aws ec2 stop-instances");
+          logger.info("stop ec2 instance " + id + " (" + offlineServerName + ") ...");
           ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "stop-instances", "--instance-ids", id);
           Process p = pb.start();
           int code = p.waitFor();
@@ -652,7 +673,7 @@ public class Plugin {
           e.printStackTrace();
         }
         try {
-          logger.info("aws ec2 instance-stopped");
+          logger.info("waiting ec2 instance stopped " + id + " (" + offlineServerName + ") ...");
           ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-stopped", "--instance", id);
           Process p = pb.start();
           int code = p.waitFor();
@@ -663,6 +684,7 @@ public class Plugin {
           logger.warn("aws ec2 instance-stopped failed: " + e.getMessage());
           e.printStackTrace();
         }
+        logger.info("ec2 instance stopped " + id + " (" + offlineServerName + ") ...");
       }
 
       this.server.getScheduler().buildTask(this, () -> {
