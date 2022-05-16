@@ -107,7 +107,7 @@ class BackupService {
   }
 
   void scheduleBackupTimer() {
-    if (owner.getServer().isPrimaryThread()) {
+    if (!owner.getServer().isPrimaryThread()) {
       owner.getLogger().severe("scheduleBackupTimer called from sub-thread");
       return;
     }
