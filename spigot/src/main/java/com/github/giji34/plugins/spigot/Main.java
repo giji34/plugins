@@ -603,9 +603,6 @@ public class Main extends JavaPlugin implements Listener {
     this.borders.forget(player);
     this.editCommand.forget(player);
     this.debugStick.forget(player);
-    if (this.backupService != null) {
-      this.backupService.onPlayerQuit(event);
-    }
   }
 
   private boolean handleConnectCommand(Player player, String[] args) {

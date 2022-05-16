@@ -31,7 +31,7 @@ class BackupService {
     this.owner = owner;
   }
 
-  void timerCallback() {
+  void backupTimerCallback() {
     long numPlayers = owner.getServer().getOnlinePlayers().size();
     new Thread(() -> {
       if (lastPlayerQuitTimeMillis != null) {
@@ -47,7 +47,7 @@ class BackupService {
         }
       }
       if (!needsBackup.get()) {
-        schedule();
+        scheduleBackupTimer();
         return;
       }
 
@@ -74,40 +74,45 @@ class BackupService {
         e.printStackTrace();
       }
 
-      schedule();
+      scheduleBackupTimer();
     }).start();
+  }
+
+  private void playerActivityTimerCallback() {
+    int numPlayers = owner.getServer().getOnlinePlayers().size();
+    if (numPlayers > 0) {
+      lastPlayerQuitTimeMillis = null;
+    } else if (lastPlayerQuitTimeMillis == null) {
+      lastPlayerQuitTimeMillis = System.currentTimeMillis();
+    }
   }
 
   private long ServerTicksFromMinutes(int minutes) {
     return TimeUnit.MINUTES.toMillis(minutes) / 50;
   }
 
-  private void schedule() {
+  private void scheduleBackupTimer() {
     if (backupTimerTask != null) {
       owner.getServer().getScheduler().cancelTask(backupTimerTask);
       backupTimerTask = null;
     }
     int taskId = owner.getServer().getScheduler()
-      .scheduleSyncDelayedTask(owner, this::timerCallback, ServerTicksFromMinutes(kBackupIntervalMinutes));
+      .scheduleSyncDelayedTask(owner, this::backupTimerCallback, ServerTicksFromMinutes(kBackupIntervalMinutes));
     backupTimerTask = taskId;
+  }
+
+  private void initializePlayerActivityTimer() {
+    owner.getServer().getScheduler()
+      .scheduleSyncRepeatingTask(owner, this::playerActivityTimerCallback, 0, 20);
   }
 
   void onEnable() {
     lastPlayerQuitTimeMillis = System.currentTimeMillis();
-    schedule();
+    scheduleBackupTimer();
+    initializePlayerActivityTimer();
   }
 
   void onPlayerJoin() {
     needsBackup.set(true);
-    lastPlayerQuitTimeMillis = null;
-  }
-
-  void onPlayerQuit(PlayerQuitEvent e) {
-    Player quitPlayer = e.getPlayer();
-    long numPlayers = owner.getServer().getOnlinePlayers().stream().filter(it -> !it.getUniqueId().equals(quitPlayer.getUniqueId())).count();
-    if (numPlayers > 0) {
-      return;
-    }
-    lastPlayerQuitTimeMillis = System.currentTimeMillis();
   }
 }
