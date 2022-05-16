@@ -480,9 +480,15 @@ public class Plugin {
   private void startServer(Player player, String server) {
     Optional<String> maybeId = config.getInstanceId(server);
     if (maybeId.isEmpty()) {
-      player.sendMessage(Component.text("Server \"" + server + "\" does not configured", TextColor.fromCSSHexString("red")), MessageType.SYSTEM);
+      player.sendMessage(Component.text("Server \"" + server + "\" is not configured", TextColor.fromCSSHexString("red")), MessageType.SYSTEM);
       return;
     }
+    Optional<RegisteredServer> maybeServer = this.server.getServer(server);
+    if (maybeServer.isEmpty()) {
+      player.sendMessage(Component.text("Server \"" + server + "\" is not connected", TextColor.fromCSSHexString("red")), MessageType.SYSTEM);
+      return;
+    }
+    String host = maybeServer.get().getServerInfo().getAddress().getAddress().getHostAddress();
     String id = maybeId.get();
     final Logger logger = this.logger;
     new Thread(() -> {
@@ -490,18 +496,43 @@ public class Plugin {
         logger.info("start ec2 instance " + id + " (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id);
         Process p = pb.start();
-        p.waitFor();
-      } catch (Exception e) {
-        logger.error("aws ec2 start-instances failed");
+        int code = p.waitFor();
+        if (code != 0) {
+          logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+          return;
+        }
+      } catch (Throwable e) {
+        logger.error("aws ec2 start-instances failed: " + e.getMessage());
+        e.printStackTrace();
         return;
       }
       try {
         logger.info("waiting ec2 instance running " + id + " (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id);
         Process p = pb.start();
-        p.waitFor();
-      } catch (Exception e) {
-        logger.error("aws ec2 wait instance-running failed");
+        int code = p.waitFor();
+        if (code != 0) {
+          logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+          return;
+        }
+      } catch (Throwable e) {
+        logger.error("aws ec2 wait instance-running failed: " + e.getMessage());
+        e.printStackTrace();
+        return;
+      }
+      try {
+        logger.info("starting server (" + server + ")");
+        ProcessBuilder pb = new ProcessBuilder("ssh", host, "bash", "data/server/start.sh");
+        Process p = pb.start();
+        int code = p.waitFor();
+        if (code != 0) {
+          logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+          return;
+        }
+      } catch (Throwable e) {
+        logger.error("start command failed: " + e.getMessage());
+        e.printStackTrace();
+        return;
       }
       logger.info("ec2 instance started " + id + " (" + server + ") ...");
     }).start();
