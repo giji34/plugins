@@ -495,6 +495,8 @@ public class Plugin {
       try {
         logger.info("start ec2 instance " + id + " (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "start-instances", "--instance-ids", id);
+        pb.redirectError(new File("/dev/null"));
+        pb.redirectOutput(new File("/dev/null"));
         Process p = pb.start();
         int code = p.waitFor();
         if (code != 0) {
@@ -509,6 +511,8 @@ public class Plugin {
       try {
         logger.info("waiting ec2 instance running " + id + " (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-running", "--instance", id);
+        pb.redirectError(new File("/dev/null"));
+        pb.redirectOutput(new File("/dev/null"));
         Process p = pb.start();
         int code = p.waitFor();
         if (code != 0) {
@@ -523,6 +527,8 @@ public class Plugin {
       try {
         logger.info("starting server (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("ssh", host, "bash", "data/server/start.sh");
+        pb.redirectError(new File("/dev/null"));
+        pb.redirectOutput(new File("/dev/null"));
         Process p = pb.start();
         int code = p.waitFor();
         if (code != 0) {
@@ -693,6 +699,8 @@ public class Plugin {
         try {
           logger.info("stop ec2 instance " + id + " (" + offlineServerName + ") ...");
           ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "stop-instances", "--instance-ids", id);
+          pb.redirectError(new File("/dev/null"));
+          pb.redirectOutput(new File("/dev/null"));
           Process p = pb.start();
           int code = p.waitFor();
           if (code != 0) {
@@ -706,6 +714,8 @@ public class Plugin {
         try {
           logger.info("waiting ec2 instance stopped " + id + " (" + offlineServerName + ") ...");
           ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "wait", "instance-stopped", "--instance", id);
+          pb.redirectError(new File("/dev/null"));
+          pb.redirectOutput(new File("/dev/null"));
           Process p = pb.start();
           int code = p.waitFor();
           if (code != 0) {
