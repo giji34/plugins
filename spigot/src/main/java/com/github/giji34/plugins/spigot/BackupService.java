@@ -54,8 +54,9 @@ class BackupService {
           Path.of(gbackupDirectory, "backup").toString(),
           serverRootDirectory,
           gitDirectory,
-          commitMessage);
-        pb.redirectErrorStream(true);
+          commitMessage,
+          Path.of(gbackupDirectory, "stdout.log").toString(),
+          Path.of(gbackupDirectory, "stderr.log").toString());
         Process p = pb.start();
         int code = p.waitFor();
         if (code != 0) {
