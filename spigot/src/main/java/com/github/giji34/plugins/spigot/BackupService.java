@@ -64,7 +64,7 @@ class BackupService {
           owner.getLogger().warning("backup script exit with code: " + code);
         }
 
-        needsBackup.set(false);
+        needsBackup.set(numPlayers > 0);
       } catch (Throwable e) {
         owner.getLogger().warning("backup script throws exception: " + e.getMessage());
         e.printStackTrace();
