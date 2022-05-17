@@ -22,6 +22,7 @@ class BackupService {
   private @Nullable Thread backupWorker = null;
 
   static final int kBackupIntervalMinutes = 15;
+  static final int kShutdownAfterLastPlayerQuitMinutes = 10;
 
   BackupService(String gbackupDirectory, String gitDirectory, JavaPlugin owner) {
     this.gbackupDirectory = gbackupDirectory;
@@ -89,7 +90,7 @@ class BackupService {
 
     if (lastPlayerQuitTimeMillis != null && backupWorker == null) {
       long elapsedMillis = System.currentTimeMillis() - lastPlayerQuitTimeMillis;
-      if (elapsedMillis >= TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes)) {
+      if (elapsedMillis >= TimeUnit.MINUTES.toMillis(kShutdownAfterLastPlayerQuitMinutes)) {
         if (backupTimerTask != null) {
           server.getScheduler().cancelTask(backupTimerTask);
           backupTimerTask = null;
