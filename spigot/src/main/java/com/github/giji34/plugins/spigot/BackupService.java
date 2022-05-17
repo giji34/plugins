@@ -124,7 +124,8 @@ class BackupService {
   }
 
   void onEnable() {
-    lastPlayerQuitTimeMillis = System.currentTimeMillis();
+    assert (kBackupIntervalMinutes >= kShutdownAfterLastPlayerQuitMinutes);
+    lastPlayerQuitTimeMillis = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(kBackupIntervalMinutes - kShutdownAfterLastPlayerQuitMinutes);
     scheduleBackupTimer();
     initializePlayerActivityTimer();
   }
