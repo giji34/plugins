@@ -17,10 +17,11 @@ public class GameVersion {
     this.bugfix = bugfix;
   }
 
-  private static final Pattern kServerVersionRegex = Pattern.compile(".*\\(MC: ([0-9]*)[.]([0-9]*)[.]([0-9]*)\\).*");
+  private static final Pattern kServerVersionRegex = Pattern.compile(".*\\(MC: ([0-9]*)[.]([0-9]*)([.][0-9]*)?\\).*");
 
   public static GameVersion fromServer(Server server) throws Exception {
     // git-Paper-100 (MC: 1.16.1)
+    // git-Paper-39 (MC: 1.19)
     String version = server.getVersion();
     Matcher matcher = kServerVersionRegex.matcher(version);
     if (!matcher.matches()) {
@@ -28,10 +29,13 @@ public class GameVersion {
     }
     String majorString = matcher.group(1);
     String minorString = matcher.group(2);
-    String bugfixString = matcher.group(3);
     int major = Integer.parseInt(majorString, 10);
     int minor = Integer.parseInt(minorString, 10);
-    int bugfix = Integer.parseInt(bugfixString, 10);
+    int bugfix = 0;
+    if (matcher.groupCount() == 3) {
+      String bugfixString = matcher.group(3);
+      bugfix = Integer.parseInt(bugfixString, 10);
+    }
     return new GameVersion(major, minor, bugfix);
   }
 
@@ -77,6 +81,10 @@ public class GameVersion {
       return new GameVersion(1, 18, 0);
     } else if (version <= 2865) {
       return new GameVersion(1, 18, 1);
+    } else if (version <= 2975) {
+      return new GameVersion(1, 18, 2);
+    } else if (version <= 3105) {
+      return new GameVersion(1, 19, 0);
     }
     return null;
   }
