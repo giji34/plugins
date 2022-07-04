@@ -27,7 +27,8 @@ public class BiomeHelper {
   }
 
   private static String migrateBiomeName(String name, GameVersion running) {
-    if (running.major == 1 && running.minor == 16) {
+    GameVersion v1_16 = new GameVersion(1, 16, 0);
+    if (running.graterOrEqual(v1_16)) {
       if (name.equals("minecraft:nether")) {
         return "minecraft:nether_wastes";
       }
