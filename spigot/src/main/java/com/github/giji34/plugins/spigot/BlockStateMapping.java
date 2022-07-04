@@ -27,8 +27,9 @@ public class BlockStateMapping {
     Map<String, String> table1_16To1_16_2 = load("1.16", "1.16.2");
     Map<String, String> table1_16_2To1_17 = load("1.16.2", "1.17");
     Map<String, String> table1_17To1_18 = load("1.17", "1.18");
+    Map<String, String> table1_18To1_19 = load("1.18", "1.19");
 
-    this.tableChain = new Map[]{table1_13To1_13_2, table1_13_2To1_14, table1_14To1_15, table1_15To1_16, table1_16To1_16_2, table1_16_2To1_17, table1_17To1_18};
+    this.tableChain = new Map[]{table1_13To1_13_2, table1_13_2To1_14, table1_14To1_15, table1_15To1_16, table1_16To1_16_2, table1_16_2To1_17, table1_17To1_18, table1_18To1_19};
     this.tableVersions = new GameVersion[]{
       new GameVersion(1, 13, 0),
       new GameVersion(1, 13, 2),
@@ -38,6 +39,7 @@ public class BlockStateMapping {
       new GameVersion(1, 16, 2),
       new GameVersion(1, 17, 0),
       new GameVersion(1, 18, 0),
+      new GameVersion(1, 19, 0),
     };
     if (this.tableChain.length + 1 != this.tableVersions.length) {
       throw new AssertionError();
