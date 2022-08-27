@@ -666,6 +666,13 @@ public class Main extends JavaPlugin implements Listener {
         return false;
       }
     }
+    if (args.length == 3 || args.length == 6) {
+      return true;
+    }
+    if (args.length != 9) {
+      player.sendMessage(ChatColor.RED + "引数の個数が" + args.length + "個になっています. 正しくは 9 個です");
+      return false;
+    }
     Optional<World> maybeOverworld = server.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NORMAL).findFirst();
     if (maybeOverworld.isEmpty()) {
       return false;
@@ -682,7 +689,13 @@ public class Main extends JavaPlugin implements Listener {
     }
     overworld.setChunkForceLoaded(0, 0, false);
     World world = player.getWorld();
-    Optional<Entity> maybeArmorStand = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> e.getCustomName() == uuid.toString()).stream().findFirst();
+    Optional<Entity> maybeArmorStand = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
+      String name = e.getCustomName();
+      if (name == null) {
+        return false;
+      }
+      return name.equals(uuid.toString());
+    }).stream().findFirst();
     if (maybeArmorStand.isEmpty()) {
       server.getLogger().warning("armor_stand not found with name: " + uuid);
       player.sendMessage(ChatColor.RED + "gclone コマンドが失敗しました(3)");
