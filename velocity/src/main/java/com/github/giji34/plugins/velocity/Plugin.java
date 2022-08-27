@@ -108,18 +108,21 @@ public class Plugin {
 
   @Subscribe
   public void onPlayerChat(PlayerChatEvent e) {
-    e.setResult(PlayerChatEvent.ChatResult.denied());
     Player player = e.getPlayer();
 
-    Optional<ServerConnection> currentServer = player.getCurrentServer();
-    String message = "";
-    if (currentServer.isPresent()) {
-      message = "[" + currentServer.get().getServerInfo().getName() + "]";
+    Optional<ServerConnection> maybeCurrentServer = player.getCurrentServer();
+    if (maybeCurrentServer.isEmpty()) {
+      return;
     }
+    ServerConnection currentServer = maybeCurrentServer.get();
+    String message = "[" + currentServer.getServerInfo().getName() + "]";
     message += "<" + player.getUsername() + "> ";
     message += e.getMessage();
 
     for (RegisteredServer server : this.server.getAllServers()) {
+      if (currentServer.getServer().getServerInfo().getName().equals(server.getServerInfo().getName())) {
+        continue;
+      }
       server.sendMessage(Component.text(message), MessageType.CHAT);
     }
   }
