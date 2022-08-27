@@ -70,6 +70,19 @@ class BackupService {
         e.printStackTrace();
       }
 
+      try {
+        ProcessBuilder pb = new ProcessBuilder("git", "push", "origin");
+        pb.directory(new File(gitDirectory));
+        Process p = pb.start();
+        int code = p.waitFor();
+        if (code != 0) {
+          owner.getLogger().warning("git command exit with code: " + code);
+        }
+      } catch (Throwable e) {
+        owner.getLogger().warning("git command throws exception: " + e.getMessage());
+        e.printStackTrace();
+      }
+
       this.owner.getServer().getScheduler()
         .scheduleSyncDelayedTask(this.owner, () -> {
           this.backupWorker = null;
