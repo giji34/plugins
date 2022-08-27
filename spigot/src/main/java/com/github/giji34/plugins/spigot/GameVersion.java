@@ -1,6 +1,7 @@
 package com.github.giji34.plugins.spigot;
 
 import org.bukkit.Server;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.regex.Matcher;
@@ -19,7 +20,7 @@ public class GameVersion {
 
   private static final Pattern kServerVersionRegex = Pattern.compile(".*\\(MC: ([0-9]+)[.]([0-9]+)([.][0-9]+)?\\).*");
 
-  public static GameVersion fromServer(Server server) throws Exception {
+  public static @NotNull GameVersion fromServer(Server server) throws Exception {
     // git-Paper-100 (MC: 1.16.1)
     // git-Paper-39 (MC: 1.19)
     String version = server.getVersion();
@@ -39,8 +40,7 @@ public class GameVersion {
     return new GameVersion(major, minor, bugfix);
   }
 
-  @Nullable
-  public static GameVersion fromChunkDataVersion(int version) {
+  public static @Nullable GameVersion fromChunkDataVersion(int version) {
     if (version <= 1519) {
       return new GameVersion(1, 13, 0);
     } else if (version <= 1628) {
@@ -85,11 +85,16 @@ public class GameVersion {
       return new GameVersion(1, 18, 2);
     } else if (version <= 3105) {
       return new GameVersion(1, 19, 0);
+    } else if (version <= 3117) {
+      return new GameVersion(1, 19, 1);
+    } else if (version <= 3120) {
+      return new GameVersion(1, 19, 2);
     }
+    System.err.println("Unknown chunk data version: " + version);
     return null;
   }
 
-  public boolean less(GameVersion other) {
+  public boolean less(@NotNull GameVersion other) {
     if (this.major > other.major) {
       return false;
     } else if (this.major < other.major) {
@@ -103,15 +108,15 @@ public class GameVersion {
     return this.bugfix < other.bugfix;
   }
 
-  public boolean lessOrEqual(GameVersion other) {
+  public boolean lessOrEqual(@NotNull GameVersion other) {
     return this.less(other) || this.equals(other);
   }
 
-  public boolean grater(GameVersion other) {
+  public boolean grater(@NotNull GameVersion other) {
     return other.less(this);
   }
 
-  public boolean graterOrEqual(GameVersion other) {
+  public boolean graterOrEqual(@NotNull GameVersion other) {
     return this.grater(other) || this.equals(other);
   }
 

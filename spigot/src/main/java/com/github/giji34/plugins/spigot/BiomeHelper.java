@@ -2,6 +2,7 @@ package com.github.giji34.plugins.spigot;
 
 import org.bukkit.Server;
 import org.bukkit.block.Biome;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 
@@ -26,7 +27,7 @@ public class BiomeHelper {
     }
   }
 
-  private static String migrateBiomeName(String name, GameVersion running) {
+  private static String migrateBiomeName(String name, @NotNull GameVersion running) {
     GameVersion v1_16 = new GameVersion(1, 16, 0);
     if (running.graterOrEqual(v1_16)) {
       if (name.equals("minecraft:nether")) {
