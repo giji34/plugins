@@ -147,9 +147,9 @@ public class Main extends JavaPlugin implements Listener {
     if (connect != null) {
       connect.setTabCompleter(new StringListTabCompleter(new String[]{"2434_main", "2434_world06", "hololive_01", "en_hololive", "hololive_00", "id_hololive"}));
     }
-    PluginCommand gclone = getCommand("gclone");
-    if (gclone != null) {
-      gclone.setTabCompleter(new LookingAtTabCompleter());
+    PluginCommand clone = getCommand("/clone");
+    if (clone != null) {
+      clone.setTabCompleter(new LookingAtTabCompleter());
     }
     PluginCommand hotbar = getCommand("/");
     if (hotbar != null) {
@@ -238,7 +238,7 @@ public class Main extends JavaPlugin implements Listener {
         return editCommand.kusa(player);
       case "giji34":
         return this.handleAdminCommand(player, args);
-      case "gclone":
+      case "/clone":
         return this.handleCloneCommand(player, args);
       case "hibernate":
         return this.handleHibernate(player, args);
@@ -693,43 +693,24 @@ public class Main extends JavaPlugin implements Listener {
       player.sendMessage(ChatColor.RED + "コマンドが失敗しました(2)");
     }
     overworld.setChunkForceLoaded(0, 0, false);
+    String command = "execute as @e[type=armor_stand,name=" + uuid + "] run " + commandString;
+    try {
+      if (!server.dispatchCommand(console, command)) {
+        player.sendMessage(ChatColor.RED + "コマンドが失敗しました(3)");
+      }
+    } catch (CommandException e) {
+      player.sendMessage(ChatColor.RED + e.getLocalizedMessage());
+    }
+
     World world = player.getWorld();
-    Optional<Entity> maybeArmorStand = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
+    Optional<Entity> armorStand = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
       String name = e.getCustomName();
       if (name == null) {
         return false;
       }
       return name.equals(uuid.toString());
     }).stream().findFirst();
-    if (maybeArmorStand.isEmpty()) {
-      server.getLogger().warning("armor_stand not found with name: " + uuid);
-      player.sendMessage(ChatColor.RED + "コマンドが失敗しました(3)");
-      return false;
-    }
-    Entity armorStand = maybeArmorStand.get();
-    String command = "execute as @e[type=armor_stand,name=" + uuid + "] run " + commandString;
-    try {
-      if (!server.dispatchCommand(armorStand, command)) {
-        player.sendMessage(ChatColor.RED + "コマンドが失敗しました(4)");
-      }
-    } catch (CommandException e) {
-      player.sendMessage(ChatColor.RED + e.getLocalizedMessage());
-    }
-
-    // Kill armor_stand in later tick
-//    server.getScheduler().scheduleSyncDelayedTask(this, () -> {
-//      Optional<Entity> maybeArmorStand2 = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
-//        String name = e.getCustomName();
-//        if (name == null) {
-//          return false;
-//        }
-//        return name.equals(uuid.toString());
-//      }).stream().findFirst();
-//      if (maybeArmorStand2.isEmpty()) {
-//        return;
-//      }
-//      maybeArmorStand2.get().remove();
-//    });
+    armorStand.ifPresent(Entity::remove);
     return true;
   }
 
