@@ -656,8 +656,6 @@ public class Main extends JavaPlugin implements Listener {
   }
 
   private boolean handleCloneCommand(Player player, String[] args) {
-    Server server = getServer();
-    CommandSender console = server.getConsoleSender();
     for (int i = 0; i < args.length; i++) {
       try {
         Integer.parseInt(args[i], 10);
@@ -673,6 +671,13 @@ public class Main extends JavaPlugin implements Listener {
       player.sendMessage(ChatColor.RED + "引数の個数が" + args.length + "個になっています. 正しくは 9 個です");
       return false;
     }
+    String command = "clone " + String.join(" ", args);
+    return runCommandAsTemporaryArmorStand(player, command);
+  }
+
+  private boolean runCommandAsTemporaryArmorStand(Player player, String commandString) {
+    Server server = getServer();
+    CommandSender console = server.getConsoleSender();
     Optional<World> maybeOverworld = server.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NORMAL).findFirst();
     if (maybeOverworld.isEmpty()) {
       return false;
@@ -682,10 +687,10 @@ public class Main extends JavaPlugin implements Listener {
     overworld.setChunkForceLoaded(0, 0, true);
     UUID uuid = UUID.randomUUID();
     if (!server.dispatchCommand(console, "summon armor_stand 0 -66 0 {CustomName:\"\\\"" + uuid + "\\\"\",NoGravity:1b,Invisible:1b}")) {
-      player.sendMessage(ChatColor.RED + "gclone コマンドが失敗しました(1)");
+      player.sendMessage(ChatColor.RED + "コマンドが失敗しました(1)");
     }
     if (!server.dispatchCommand(console, "tp @e[type=armor_stand,name=" + uuid + "] " + player.getName())) {
-      player.sendMessage(ChatColor.RED + "gclone コマンドが失敗しました(2)");
+      player.sendMessage(ChatColor.RED + "コマンドが失敗しました(2)");
     }
     overworld.setChunkForceLoaded(0, 0, false);
     World world = player.getWorld();
@@ -698,14 +703,14 @@ public class Main extends JavaPlugin implements Listener {
     }).stream().findFirst();
     if (maybeArmorStand.isEmpty()) {
       server.getLogger().warning("armor_stand not found with name: " + uuid);
-      player.sendMessage(ChatColor.RED + "gclone コマンドが失敗しました(3)");
+      player.sendMessage(ChatColor.RED + "コマンドが失敗しました(3)");
       return false;
     }
     Entity armorStand = maybeArmorStand.get();
-    String command = "clone " + String.join(" ", args);
+    String command = "execute as @e[type=armor_stand,name=" + uuid + "] run " + commandString;
     try {
       if (!server.dispatchCommand(armorStand, command)) {
-        player.sendMessage(ChatColor.RED + "gclone コマンドが失敗しました(4)");
+        player.sendMessage(ChatColor.RED + "コマンドが失敗しました(4)");
       }
     } catch (CommandException e) {
       player.sendMessage(ChatColor.RED + e.getLocalizedMessage());
