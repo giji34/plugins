@@ -712,19 +712,19 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     // Kill armor_stand in later tick
-    server.getScheduler().scheduleSyncDelayedTask(this, () -> {
-      Optional<Entity> maybeArmorStand2 = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
-        String name = e.getCustomName();
-        if (name == null) {
-          return false;
-        }
-        return name.equals(uuid.toString());
-      }).stream().findFirst();
-      if (maybeArmorStand2.isEmpty()) {
-        return;
-      }
-      maybeArmorStand2.get().remove();
-    });
+//    server.getScheduler().scheduleSyncDelayedTask(this, () -> {
+//      Optional<Entity> maybeArmorStand2 = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
+//        String name = e.getCustomName();
+//        if (name == null) {
+//          return false;
+//        }
+//        return name.equals(uuid.toString());
+//      }).stream().findFirst();
+//      if (maybeArmorStand2.isEmpty()) {
+//        return;
+//      }
+//      maybeArmorStand2.get().remove();
+//    });
     return true;
   }
 
