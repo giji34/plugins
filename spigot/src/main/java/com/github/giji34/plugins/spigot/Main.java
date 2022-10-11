@@ -672,10 +672,10 @@ public class Main extends JavaPlugin implements Listener {
       return false;
     }
     String command = "clone " + String.join(" ", args);
-    return runCommandAsTemporaryArmorStand(player, command);
+    return runCommandAsTemporaryCommandSender(player, command);
   }
 
-  private boolean runCommandAsTemporaryArmorStand(Player player, String commandString) {
+  private boolean runCommandAsTemporaryCommandSender(Player player, String commandString) {
     Server server = getServer();
     CommandSender console = server.getConsoleSender();
     Optional<World> maybeOverworld = server.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NORMAL).findFirst();
@@ -686,31 +686,37 @@ public class Main extends JavaPlugin implements Listener {
     overworld.loadChunk(0, 0);
     overworld.setChunkForceLoaded(0, 0, true);
     UUID uuid = UUID.randomUUID();
-    if (!server.dispatchCommand(console, "summon armor_stand 0 -66 0 {CustomName:\"\\\"" + uuid + "\\\"\",NoGravity:1b,Invisible:1b}")) {
+    if (!server.dispatchCommand(console, "summon command_block_minecart 0 -66 0 {CustomName:\"\\\"" + uuid + "\\\"\",NoGravity:1b,Invisible:1b}")) {
       player.sendMessage(ChatColor.RED + "コマンドが失敗しました(1)");
     }
-    if (!server.dispatchCommand(console, "tp @e[type=armor_stand,name=" + uuid + "] " + player.getName())) {
+    // command_block_minecart doesn't tick. Summon armor_stand here in order to tick the force loaded chunk.
+    if (!server.dispatchCommand(console, "summon armor_stand 0 -66 0 {CustomName:\"\\\"" + uuid + "\\\"\",NoGravity:1b,Invisible:1b}")) {
       player.sendMessage(ChatColor.RED + "コマンドが失敗しました(2)");
     }
+    if (!server.dispatchCommand(console, "tp @e[name=" + uuid + "] " + player.getName())) {
+      player.sendMessage(ChatColor.RED + "コマンドが失敗しました(3)");
+    }
     overworld.setChunkForceLoaded(0, 0, false);
-    String command = "execute as @e[type=armor_stand,name=" + uuid + "] run " + commandString;
+    String command = "execute as @e[name=" + uuid + "] run " + commandString;
     try {
       if (!server.dispatchCommand(console, command)) {
-        player.sendMessage(ChatColor.RED + "コマンドが失敗しました(3)");
+        player.sendMessage(ChatColor.RED + "コマンドが失敗しました(4)");
       }
     } catch (CommandException e) {
       player.sendMessage(ChatColor.RED + e.getLocalizedMessage());
     }
 
     World world = player.getWorld();
-    Optional<Entity> armorStand = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
+    Optional<Entity> commandSender = world.getNearbyEntities(player.getLocation(), 5, 5, 5, e -> {
       String name = e.getCustomName();
       if (name == null) {
         return false;
       }
       return name.equals(uuid.toString());
     }).stream().findFirst();
-    armorStand.ifPresent(Entity::remove);
+    if (commandSender.isPresent()) {
+      commandSender.get().remove();
+    }
     return true;
   }
 
