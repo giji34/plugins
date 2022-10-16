@@ -527,6 +527,37 @@ public class Plugin {
         e.printStackTrace();
         return;
       }
+      boolean ok = false;
+      for (int i = 0; i < 12; i++) {
+        try {
+          logger.info("waiting launcher script available (" + server + ")");
+          ProcessBuilder pb = new ProcessBuilder("ssh", host, "ls", "data/server/start.sh");
+          pb.redirectError(new File("/dev/null"));
+          pb.redirectOutput(new File("/dev/null"));
+          Process p = pb.start();
+          int code = p.waitFor();
+          if (code != 0) {
+            logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+          } else {
+            ok = true;
+            break;
+          }
+        } catch (Throwable e) {
+          logger.error("cannot find launcher script: " + e.getMessage());
+          e.printStackTrace();
+        }
+        try {
+          Thread.sleep(5000);
+        } catch (Throwable e) {
+          logger.error("Thread.sleep failed");
+          e.printStackTrace();
+          return;
+        }
+      }
+      if (!ok) {
+        logger.error("launcher script is not available");
+        return;
+      }
       try {
         logger.info("starting server (" + server + ")");
         ProcessBuilder pb = new ProcessBuilder("ssh", host, "bash", "data/server/start.sh");
