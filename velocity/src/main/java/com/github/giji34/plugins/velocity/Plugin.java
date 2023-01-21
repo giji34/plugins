@@ -537,7 +537,7 @@ public class Plugin {
           Process p = pb.start();
           int code = p.waitFor();
           if (code != 0) {
-            logger.error("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
+            logger.info("\"" + String.join(" ", pb.command()) + "\" failed with code: " + code);
           } else {
             ok = true;
             break;
