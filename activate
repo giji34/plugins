@@ -1,0 +1,3 @@
+#!/bin/bash
+
+jabba use $(cat .java-version)
