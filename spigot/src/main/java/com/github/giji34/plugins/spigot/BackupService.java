@@ -5,6 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -76,7 +77,8 @@ class BackupService {
         Process p = pb.start();
         int code = p.waitFor();
         if (code != 0) {
-          owner.getLogger().warning("git command exit with code: " + code);
+          String error = new String(p.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+          owner.getLogger().warning("git command exit with code: " + code + "; stderr=" + error);
         }
       } catch (Throwable e) {
         owner.getLogger().warning("git command throws exception: " + e.getMessage());
