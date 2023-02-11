@@ -89,6 +89,8 @@ public class GameVersion {
       return new GameVersion(1, 19, 1);
     } else if (version <= 3120) {
       return new GameVersion(1, 19, 2);
+    } else if (version <= 3218) {
+      return new GameVersion(1, 19, 3);
     }
     System.err.println("Unknown chunk data version: " + version);
     return null;
