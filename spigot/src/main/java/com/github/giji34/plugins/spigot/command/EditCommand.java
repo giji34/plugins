@@ -8,7 +8,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.dynmap.DynmapAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +32,6 @@ public class EditCommand {
   private final JavaPlugin owner;
   private String snapshotServerHost;
   private int snapshotServerPort;
-  private @Nullable DynmapAPI dynmap;
   private final BlockStateMapping mapping;
 
   static {
@@ -68,9 +66,8 @@ public class EditCommand {
     kTreeMaterials.add(Material.JUNGLE_LEAVES);
   }
 
-  public EditCommand(JavaPlugin owner, @Nullable DynmapAPI dynmap, BlockStateMapping mapping) {
+  public EditCommand(JavaPlugin owner, BlockStateMapping mapping) {
     this.owner = owner;
-    this.dynmap = dynmap;
     this.mapping = mapping;
     selectedBlockRangeRegistry = new SelectedBlockRangeRegistry();
     undoOperationRegistry = new UndoOperationRegistry();
@@ -114,7 +111,7 @@ public class EditCommand {
       player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + operation.count() + " / " + kMaxFillVolume + " )");
       return true;
     }
-    ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true, this.dynmap);
+    ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), true);
     player.sendMessage(operation.count() + " 個の " + toBlockData.getAsString(true) + " ブロックを設置しました");
     undoOperationRegistry.push(player, undo);
     return true;
@@ -149,7 +146,7 @@ public class EditCommand {
       player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
       return false;
     }
-    ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true, this.dynmap);
+    ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true);
     player.sendMessage(op.count() + " 個の " + fromName + " ブロックを " + toName + " に置き換えました");
     undoOperationRegistry.push(player, undo);
     return true;
@@ -161,7 +158,7 @@ public class EditCommand {
       player.sendMessage(ChatColor.RED + "undo する操作がまだ存在しません");
       return false;
     }
-    undo.apply(player.getServer(), player.getWorld(), false, this.dynmap);
+    undo.apply(player.getServer(), player.getWorld(), false);
     return true;
   }
 
@@ -271,7 +268,7 @@ public class EditCommand {
         if (error.isPresent()) {
           player.sendMessage(ChatColor.RED + error.get());
         } else {
-          ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false, this.dynmap);
+          ReplaceOperation undo = operation.apply(player.getServer(), player.getWorld(), false);
           undoOperationRegistry.push(player, undo);
           player.sendMessage(ChatColor.GRAY + "指定した範囲のブロックを" + finalInfo + "に戻しました");
         }
@@ -391,7 +388,7 @@ public class EditCommand {
       if (!ok) {
         continue;
       }
-      ReplaceOperation undo = op.apply(player.getServer(), world, true, this.dynmap);
+      ReplaceOperation undo = op.apply(player.getServer(), world, true);
       undoOperationRegistry.push(player, undo);
       return true;
     }
@@ -429,7 +426,7 @@ public class EditCommand {
       player.sendMessage(ChatColor.RED + "ブロックの個数が多すぎます ( " + op.count() + " / " + kMaxFillVolume + " )");
       return false;
     }
-    ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true, this.dynmap);
+    ReplaceOperation undo = op.apply(player.getServer(), player.getWorld(), true);
     player.sendMessage(op.count() + " 個のブロックを air に置き換えました");
     undoOperationRegistry.push(player, undo);
     return true;
@@ -538,7 +535,7 @@ public class EditCommand {
     if (operation.count() == 0) {
       return true;
     }
-    ReplaceOperation undo = operation.apply(server, world, true, this.dynmap);
+    ReplaceOperation undo = operation.apply(server, world, true);
     undoOperationRegistry.push(player, undo);
     return true;
   }

@@ -3,13 +3,11 @@ package com.github.giji34.plugins.spigot.command;
 import com.github.giji34.plugins.spigot.BiomeHelper;
 import com.github.giji34.plugins.spigot.BoundingBox;
 import com.github.giji34.plugins.spigot.Loc;
-import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
-import org.dynmap.DynmapAPI;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -25,7 +23,7 @@ public class ReplaceOperation {
   }
 
   @Nullable
-  ReplaceOperation apply(Server server, World world, boolean applyPhysics, @Nullable DynmapAPI dynmap) {
+  ReplaceOperation apply(Server server, World world, boolean applyPhysics) {
     if (!worldUUID.equals(world.getUID())) {
       return null;
     }
@@ -63,11 +61,6 @@ public class ReplaceOperation {
       undo.register(loc, d);
       bb.add(loc);
     });
-    if (dynmap != null) {
-      bb.use((Loc min, Loc max) -> {
-        dynmap.triggerRenderOfVolume(new Location(world, min.x, min.y, min.z), new Location(world, max.x, max.y, max.z));
-      });
-    }
     return undo;
   }
 

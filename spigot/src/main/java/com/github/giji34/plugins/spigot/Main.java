@@ -24,12 +24,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
-import org.dynmap.DynmapAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
@@ -50,7 +48,6 @@ public class Main extends JavaPlugin implements Listener {
   private Permission permission;
   private MobSpawnProhibiter mobSpawnProhibiter;
   private Borders borders;
-  private @Nullable DynmapAPI dynmap;
   private Hibernate hibernate;
   private BlockStateMapping blockStateMapping;
   private final Config config;
@@ -68,13 +65,6 @@ public class Main extends JavaPlugin implements Listener {
     File pluginDirectory = new File(jar.getParent(), "giji34");
 
     config = Config.Load(getLogger(), pluginDirectory);
-
-    for (Plugin p : getServer().getPluginManager().getPlugins()) {
-      if (p instanceof DynmapAPI) {
-        this.dynmap = (DynmapAPI) p;
-        break;
-      }
-    }
   }
 
   @Override
@@ -85,7 +75,7 @@ public class Main extends JavaPlugin implements Listener {
       this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
       this.teleportCommand.init(pluginDirectory);
       this.blockStateMapping = new BlockStateMapping(this);
-      this.editCommand = new EditCommand(this, this.dynmap, this.blockStateMapping);
+      this.editCommand = new EditCommand(this, this.blockStateMapping);
       this.editCommand.init(config);
       this.portalCommand.init(pluginDirectory);
       this.mobSpawnProhibiter = new MobSpawnProhibiter(new File(pluginDirectory, "mob_spawn_allowed_regions.yml"), this);
