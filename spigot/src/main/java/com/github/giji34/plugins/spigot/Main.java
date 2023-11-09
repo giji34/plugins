@@ -6,6 +6,7 @@ import com.github.giji34.plugins.spigot.controller.ControllerService;
 import com.github.giji34.plugins.spigot.controller.ReservedSpawnLocation;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.*;
 import org.bukkit.entity.*;
@@ -28,6 +29,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
@@ -321,6 +323,41 @@ public class Main extends JavaPlugin implements Listener {
         e.setCancelled(true);
         this.debugStick.onInteractWithOffHand(player, block);
       }
+    } else if (toolType == Material.WOODEN_PICKAXE) {
+      double sign;
+      if (action == Action.LEFT_CLICK_BLOCK || action == Action.LEFT_CLICK_AIR) {
+        e.setCancelled(true);
+        sign = 1;
+      } else if (action == Action.RIGHT_CLICK_BLOCK || action == Action.RIGHT_CLICK_AIR) {
+        e.setCancelled(true);
+        sign = -1;
+      } else {
+        return;
+      }
+      var location = player.getLocation();
+      var direction = location.getDirection();
+      class Score {
+        final BlockFace face;
+        final double size;
+
+        Score(BlockFace face, double size) {
+          this.face = face;
+          this.size = size;
+        }
+      }
+      var scores = new ArrayList<Score>();
+      for (var face : new BlockFace[]{BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.UP, BlockFace.DOWN}) {
+        var size = Math.max(Math.max(face.getModX() * direction.getX(), face.getModY() * direction.getY()), face.getModZ() * direction.getZ());
+        scores.add(new Score(face, size));
+      }
+      scores.sort(Comparator.comparingDouble(it -> -it.size));
+      var likely = scores.stream().findFirst();
+      if (likely.isEmpty()) {
+        return;
+      }
+      var face = likely.get().face;
+      var vec = new Vector(face.getModX() * 0.1 * sign, face.getModY() * 0.1 * sign, face.getModZ() * 0.1 * sign);
+      player.teleport(location.add(vec));
     }
   }
 
