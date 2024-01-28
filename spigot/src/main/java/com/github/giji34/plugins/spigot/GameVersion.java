@@ -4,6 +4,7 @@ import org.bukkit.Server;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -97,6 +98,8 @@ public class GameVersion {
       return new GameVersion(1, 20, 0);
     } else if (version <= 3465) {
       return new GameVersion(1, 20, 1);
+    } else if (version <= 3578) {
+      return new GameVersion(1, 20, 2);
     }
     System.err.println("Unknown chunk data version: " + version);
     return null;
@@ -142,10 +145,7 @@ public class GameVersion {
 
   @Override
   public int hashCode() {
-    int result = major;
-    result = 31 * result + minor;
-    result = 31 * result + bugfix;
-    return result;
+    return Objects.hash(major, minor, bugfix);
   }
 
   @Override
