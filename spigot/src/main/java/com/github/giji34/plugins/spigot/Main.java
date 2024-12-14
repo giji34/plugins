@@ -63,17 +63,13 @@ public class Main extends JavaPlugin implements Listener {
   private @Nullable BackupService backupService;
 
   public Main() {
-    File jar = getFile();
-    File pluginDirectory = new File(jar.getParent(), "giji34");
-
-    config = Config.Load(getLogger(), pluginDirectory);
+    config = Config.Load(getLogger(), getDataFolder());
   }
 
   @Override
   public void onLoad() {
     try {
-      File jar = getFile();
-      File pluginDirectory = new File(jar.getParent(), "giji34");
+      File pluginDirectory = getDataFolder();
       this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
       this.teleportCommand.init(pluginDirectory);
       this.blockStateMapping = new BlockStateMapping(this);
@@ -96,8 +92,7 @@ public class Main extends JavaPlugin implements Listener {
   }
 
   private void reload() {
-    File jar = getFile();
-    File pluginDirectory = new File(jar.getParent(), "giji34");
+    File pluginDirectory = getDataFolder();
     this.permission = new Permission(new File(pluginDirectory, "permission.yml"));
     try {
       this.teleportCommand.reload();
